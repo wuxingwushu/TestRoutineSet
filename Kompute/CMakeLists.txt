@@ -7,19 +7,19 @@ set(CMAKE_CXX_STANDARD 17)
 aux_source_directory(. DIRSRCS)
 
 include_directories(
-	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/Kompute/include
+	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/Kompute0.6/include
 	SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/VulKan/include
 )
 
 # 设置 lib 的文件路径（区分 Debug / Release）
 if(CMAKE_BUILD_TYPE AND (CMAKE_BUILD_TYPE STREQUAL "Debug"))
 	link_directories(
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/Kompute/lib/Debug
+		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/Kompute0.6/lib/Debug
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/VulKan/Lib
 	)
 else()
 	link_directories(
-		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/Kompute/lib/Release
+		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/Kompute0.6/lib/Release
 		SYSTEM ${CMAKE_CURRENT_SOURCE_DIR}./../Environment/VulKan/Lib
 	)
 endif()

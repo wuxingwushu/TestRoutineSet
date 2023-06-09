@@ -21,3 +21,5 @@ add_subdirectory(VulKan_Mandelbrot build/VulKan_Mandelbrot)
 add_subdirectory(MIDI build/MIDI)
 # 导入SoloudMIDI项目
 add_subdirectory(SoloudMIDI build/SoloudMIDI)
+# 导入ClassCallback项目
+add_subdirectory(ClassCallback build/ClassCallback)
