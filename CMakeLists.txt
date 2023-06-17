@@ -23,3 +23,13 @@ add_subdirectory(MIDI build/MIDI)
 add_subdirectory(SoloudMIDI build/SoloudMIDI)
 # 导入ClassCallback项目
 add_subdirectory(ClassCallback build/ClassCallback)
+# 导入C++Rasterization项目
+add_subdirectory(C++Rasterization build/C++Rasterization)
+# 导入Quadtree项目
+add_subdirectory(Quadtree build/Quadtree)
+# 导入RedBlackTree项目
+add_subdirectory(RedBlackTree build/RedBlackTree)
+# 导入Timer项目
+add_subdirectory(Timer build/Timer)
+# 导入ContinuousPlate项目
+add_subdirectory(ContinuousPlate build/ContinuousPlate)

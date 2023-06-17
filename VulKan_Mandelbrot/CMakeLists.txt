@@ -28,7 +28,7 @@ else()
 endif()
 
 # 将源文件添加到可执行文件中
-add_executable(VulKan_Mandelbrot main.cpp lodepng.cpp)
+add_executable(VulKan_Mandelbrot ${DIRSRCS})
 
 target_link_libraries(
 	VulKan_Mandelbrot

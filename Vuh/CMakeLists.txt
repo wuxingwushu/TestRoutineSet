@@ -33,7 +33,7 @@ else()
 endif()
 
 # 将源文件添加到可执行文件中
-add_executable(VUH main.cpp)
+add_executable(VUH ${DIRSRCS})
 
 target_link_libraries(
 	VUH

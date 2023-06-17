@@ -32,7 +32,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}./floresta
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}./夜に駆ける.mid ${CMAKE_CURRENT_BINARY_DIR})# 拷贝配置信息
 
 # 将源文件添加到可执行文件中
-add_executable(MIDI main.cpp minisdl_audio.c)
+add_executable(MIDI ${DIRSRCS})
 
 target_link_libraries(
 	MIDI

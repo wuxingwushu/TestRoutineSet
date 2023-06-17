@@ -28,7 +28,7 @@ else()
 endif()
 
 # 将源文件添加到可执行文件中
-add_executable(ClassCallback main.cpp)
+add_executable(ClassCallback ${DIRSRCS})
 
 target_link_libraries(
 	ClassCallback

@@ -28,7 +28,7 @@ else()
 endif()
 
 # 将源文件添加到可执行文件中
-add_executable(Labyrinth main.cpp)
+add_executable(Labyrinth ${DIRSRCS})
 
 target_link_libraries(
 	Labyrinth

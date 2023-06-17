@@ -28,7 +28,7 @@ else()
 endif()
 
 # 将源文件添加到可执行文件中
-add_executable(GenerateMaze main.cpp)
+add_executable(GenerateMaze ${DIRSRCS})
 
 target_link_libraries(
 	GenerateMaze
