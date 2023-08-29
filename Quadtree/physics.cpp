@@ -127,7 +127,7 @@ int main()
         std::cout << kao[i]->id << '\n';
     }
 
-    mquadtree.getBox();
+    mquadtree.UpdateQuadtree();
 
     return 0;
 }

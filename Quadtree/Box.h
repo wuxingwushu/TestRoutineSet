@@ -41,6 +41,7 @@ public:
         return Vector2<T>(left, top);
     }
 
+    //获取中心点
     constexpr Vector2<T> getCenter() const noexcept
     {
         return Vector2<T>(left + width / 2, top + height / 2);
@@ -51,16 +52,25 @@ public:
         return Vector2<T>(width, height);
     }
 
+    //是否包含在内 包含: true
     constexpr bool contains(const Box<T>& box) const noexcept
     {
         return left <= box.left && box.getRight() <= getRight() &&
             top <= box.top && box.getBottom() <= getBottom();
     }
 
+    //是否有相交点 有相交点: true
     constexpr bool intersects(const Box<T>& box) const noexcept
     {
         return !(left >= box.getRight() || getRight() <= box.left ||
             top >= box.getBottom() || getBottom() <= box.top);
+    }
+
+    //点在范围内
+    constexpr bool Range(const Vector2<T>& pos) const noexcept
+    {
+        return left <= pos.x && pos.x <= getRight() &&
+            top <= pos.y && pos.y <= getBottom();
     }
 };
 

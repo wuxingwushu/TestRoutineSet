@@ -24,20 +24,21 @@ public:
     Quadtree(const Box<Float>& box, const GetBox& getBox = GetBox(),
         const Equal& equal = Equal()) :
         mBox(box), mRoot(std::make_unique<Node>()), mGetBox(getBox), mEqual(equal)
-    {
+    {}
 
-    }
-
+    //添加
     void add(const T& value)
     {
-        add(mRoot.get(), 0, mBox, value);
+        add_(mRoot.get(), 0, mBox, value);
     }
 
+    //移除
     void remove(const T& value)
     {
         remove(mRoot.get(), mBox, value);
     }
 
+    //查询
     std::vector<T> query(const Box<Float>& box) const
     {
         auto values = std::vector<T>();
@@ -45,11 +46,17 @@ public:
         return values;
     }
 
+    //获取全部两两相交
     std::vector<std::pair<T, T>> findAllIntersections() const
     {
         auto intersections = std::vector<std::pair<T, T>>();
         findAllIntersections(mRoot.get(), intersections);
         return intersections;
+    }
+
+    //更新全部数据
+    void UpdateQuadtree() {
+        UpdateAllDescendants(mRoot.get(), mBox);
     }
 
     Box<Float> getBox() const 
@@ -58,8 +65,8 @@ public:
     }
     
 private:
-    static constexpr auto Threshold = std::size_t(16);
-    static constexpr auto MaxDepth = std::size_t(8);
+    static constexpr auto Threshold = std::size_t(16);  //门槛
+    static constexpr auto MaxDepth = std::size_t(8);    //最大深度
 
     struct Node
     {
@@ -69,14 +76,16 @@ private:
 
     Box<Float> mBox;
     std::unique_ptr<Node> mRoot;
-    GetBox mGetBox;
-    Equal mEqual;
+    GetBox mGetBox;//获取 自定义数据结构里的Box 函数指针
+    Equal mEqual;//判断 两个 是否 相等
 
+    //判断 是否是 最小的正方形，没有子节点， 没有返回 true
     bool isLeaf(const Node* node) const
     {
         return !static_cast<bool>(node->children[0]);
     }
 
+    //计算获取 正方形 中 均分四份之一的 小正方形
     Box<Float> computeBox(const Box<Float>& box, int i) const
     {
         auto origin = box.getTopLeft();
@@ -101,6 +110,7 @@ private:
         }
     }
 
+    //获取 node 在 那个 小正方形 中，或者 不在
     int getQuadrant(const Box<Float>& nodeBox, const Box<Float>& valueBox) const
     {
         auto center = nodeBox.getCenter();
@@ -135,54 +145,60 @@ private:
             return -1;
     }
 
-    void add(Node* node, std::size_t depth, const Box<Float>& box, const T& value)
+    void add_(Node* node, std::size_t depth, const Box<Float>& box, const T& value)
     {
         assert(node != nullptr);
         assert(box.contains(mGetBox(value)));
         if (isLeaf(node))
         {
+            //没有子节点了
+
             // Insert the value in this node if possible
             if (depth >= MaxDepth || node->values.size() < Threshold)
                 node->values.push_back(value);
             // Otherwise, we split and we try again
             else
             {
-                split(node, box);
-                add(node, depth, box, value);
+                split(node, box);//切分正方形
+                add_(node, depth, box, value);
             }
         }
         else
         {
-            auto i = getQuadrant(box, mGetBox(value));
+            //有子节点
+
+            auto i = getQuadrant(box, mGetBox(value));//在那个子节点
             // Add the value in a child if the value is entirely contained in it
-            if (i != -1)
-                add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
+            if (i != -1)//没在子节点范围内
+                add_(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
             // Otherwise, we add the value in the current node
             else
-                node->values.push_back(value);
+                node->values.push_back(value);//都不在就父类储存
         }
     }
 
+    //切分正方形
     void split(Node* node, const Box<Float>& box)
     {
         assert(node != nullptr);
         assert(isLeaf(node) && "Only leaves can be split");
         // Create children
         for (auto& child : node->children)
-            child = std::make_unique<Node>();
+            child = std::make_unique<Node>();//构建子节点
         // Assign values to children
         auto newValues = std::vector<T>(); // New values for this node
         for (const auto& value : node->values)
         {
-            auto i = getQuadrant(box, mGetBox(value));
+            auto i = getQuadrant(box, mGetBox(value));//判断在那个小正方形内
             if (i != -1)
                 node->children[static_cast<std::size_t>(i)]->values.push_back(value);
             else
-                newValues.push_back(value);
+                newValues.push_back(value);//都不在就父类储存
         }
-        node->values = std::move(newValues);
+        node->values = std::move(newValues);//转移数据到
     }
 
+    //移除
     bool remove(Node* node, const Box<Float>& box, const T& value)
     {
         assert(node != nullptr);
@@ -191,7 +207,7 @@ private:
         {
             // Remove the value from node
             removeValue(node, value);
-            return true;
+            return true;//当时在子节点时，递归函数 返回 true
         }
         else
         {
@@ -199,7 +215,7 @@ private:
             auto i = getQuadrant(box, mGetBox(value));
             if (i != -1)
             {
-                if (remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value))
+                if (remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value))//收到子节点 返回的 true
                     return tryMerge(node);
             }
             // Otherwise, we remove the value from the current node
@@ -209,28 +225,32 @@ private:
         }
     }
 
+    //删除对应的数据
     void removeValue(Node* node, const T& value)
     {
-        // Find the value in node->values
+        // Find the value in node->values //找到对应的数据
         auto it = std::find_if(std::begin(node->values), std::end(node->values),
             [this, &value](const auto& rhs){ return mEqual(value, rhs); });
         assert(it != std::end(node->values) && "Trying to remove a value that is not present in the node");
         // Swap with the last element and pop back
-        *it = std::move(node->values.back());
-        node->values.pop_back();
+        *it = std::move(node->values.back());//最后一个数据赋值给被删除的数据
+        node->values.pop_back();//弹出最后一个数据
     }
 
+    //尝试合并正方形
     bool tryMerge(Node* node)
     {
         assert(node != nullptr);
         assert(!isLeaf(node) && "Only interior nodes can be merged");
         auto nbValues = node->values.size();
+        //获取正方形内，数据数量
         for (const auto& child : node->children)
         {
             if (!isLeaf(child.get()))
                 return false;
             nbValues += child->values.size();
         }
+        //当数据小于 Threshold 时 合并正方形
         if (nbValues <= Threshold)
         {
             node->values.reserve(nbValues);
@@ -238,37 +258,39 @@ private:
             for (const auto& child : node->children)
             {
                 for (const auto& value : child->values)
-                    node->values.push_back(value);
+                    node->values.push_back(value);//把子节点的数据都还给父节点
             }
             // Remove the children
             for (auto& child : node->children)
-                child.reset();
+                child.reset();//释放父节点
             return true;
         }
         else
             return false;
     }
 
+    //查询
     void query(Node* node, const Box<Float>& box, const Box<Float>& queryBox, std::vector<T>& values) const
     {
         assert(node != nullptr);
         assert(queryBox.intersects(box));
-        for (const auto& value : node->values)
+        for (const auto& value : node->values)//遍历数据
         {
-            if (queryBox.intersects(mGetBox(value)))
+            if (queryBox.intersects(mGetBox(value)))//获取相交的正方形
                 values.push_back(value);
         }
-        if (!isLeaf(node))
+        if (!isLeaf(node))//当子节点不为空时，进行递归
         {
             for (auto i = std::size_t(0); i < node->children.size(); ++i)
             {
-                auto childBox = computeBox(box, static_cast<int>(i));
-                if (queryBox.intersects(childBox))
-                    query(node->children[i].get(), childBox, queryBox, values);
+                auto childBox = computeBox(box, static_cast<int>(i));//获取小正方形
+                if (queryBox.intersects(childBox))//和小正方形 是否 相交
+                    query(node->children[i].get(), childBox, queryBox, values);//递归
             }
         }
     }
 
+    //在自身正方形内查找两两相交的
     void findAllIntersections(Node* node, std::vector<std::pair<T, T>>& intersections) const
     {
         // Find intersections between values stored in this node
@@ -284,17 +306,18 @@ private:
         if (!isLeaf(node))
         {
             // Values in this node can intersect values in descendants
-            for (const auto& child : node->children)
+            for (const auto& child : node->children)//编译每一个子节点
             {
-                for (const auto& value : node->values)
+                for (const auto& value : node->values)//父类每一个对象都编译一边
                     findIntersectionsInDescendants(child.get(), value, intersections);
             }
             // Find intersections in children
             for (const auto& child : node->children)
-                findAllIntersections(child.get(), intersections);
+                findAllIntersections(child.get(), intersections);//递归
         }
     }
 
+    //输入数据 和 子节点 相交判断
     void findIntersectionsInDescendants(Node* node, const T& value, std::vector<std::pair<T, T>>& intersections) const
     {
         // Test against the values stored in this node
@@ -304,11 +327,36 @@ private:
                 intersections.emplace_back(value, other);
         }
         // Test against values stored into descendants of this node
-        if (!isLeaf(node))
+        if (!isLeaf(node))//还有子节点进行递归
         {
             for (const auto& child : node->children)
                 findIntersectionsInDescendants(child.get(), value, intersections);
         }
+    }
+
+    //更新全部数据
+    bool UpdateAllDescendants(Node* node, const Box<Float>& box)
+    {
+        bool MergeBool = false;//是否尝试合并
+        for (auto i = std::size_t(0); i < node->values.size(); ++i)
+        {
+            if (!box.Range(mGetBox(node->values[i]).getCenter())) {//点不在范围内
+                //重新添加
+                add_(mRoot.get(), 0, mBox, node->values[i]);
+                //删除久位置
+                node->values[i] = std::move(node->values.back());
+                node->values.pop_back();
+                //如果是子节点就通知父节点尝试合并
+                if (!isLeaf(node))
+                    MergeBool = true;
+            }
+        }
+        if (!isLeaf(node)) {
+            for (auto i = std::size_t(0); i < node->children.size(); ++i)//遍历所有子节点
+                if (UpdateAllDescendants(node->children[i].get(), computeBox(box, i)))
+                    tryMerge(node);//尝试合并
+        }
+        return MergeBool;
     }
 };
 

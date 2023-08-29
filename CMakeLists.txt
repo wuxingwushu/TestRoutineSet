@@ -49,3 +49,9 @@ add_subdirectory(Curl_WedDav build/Curl_WedDav)
 add_subdirectory(ReptilesYouDao build/ReptilesYouDao)
 # 导入A_Star_Algorithm项目
 add_subdirectory(A_Star_Algorithm build/A_Star_Algorithm)
+# 导入Trie项目
+add_subdirectory(Trie build/Trie)
+# 导入BP项目
+add_subdirectory(BP build/BP)
+# 导入sml项目
+add_subdirectory(sml build/sml)

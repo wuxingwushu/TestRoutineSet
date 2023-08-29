@@ -1,6 +1,6 @@
 #pragma once
 
-#define AStar_MemoryPool
+//#define AStar_MemoryPool
 
 #ifdef AStar_MemoryPool// 开启  内存池
 #include "MemoryPool.h"

@@ -17,7 +17,7 @@ int main() {
 
     // 使用 bind 函数将指针和类实例组合成一个 functor
     auto func = std::bind(&MyClass::memberFunction, &obj, std::placeholders::_1);
-
+    func(123);
     // 回调 functor
     callback(func, 123);
 
