@@ -55,3 +55,9 @@ add_subdirectory(Trie build/Trie)
 add_subdirectory(BP build/BP)
 # 导入sml项目
 add_subdirectory(sml build/sml)
+# 导入MovePlate项目
+add_subdirectory(MovePlate build/MovePlate)
+# 导入virtual项目
+add_subdirectory(virtual build/virtual)
+# 导入WFC项目
+add_subdirectory(WFC build/WFC)

@@ -1,5 +1,5 @@
 #include <iostream>
-#include "ContinuousPlate.h"
+#include "MovePlate.h"
 
 void DC(int* Data, void* Class) {
 	std::cout << "销毁：" << *Data << std::endl;
@@ -10,10 +10,9 @@ void GC(int* Data, int x, int y, void* Class) {
 }
 
 int main() {
-	ContinuousPlate<int>* mContinuousPlate = new ContinuousPlate<int>(4, 4, 1);//创建 4 * 4 的板块（板块间距为 1）
+	MovePlate<int>* mContinuousPlate = new MovePlate<int>(4, 4, 1, 2, 2);//创建 4 * 4 的板块（板块间距为 1）
 	mContinuousPlate->SetPos(0, 0);//设置起始位置
 	mContinuousPlate->SetCallback(GC, nullptr, DC, nullptr);//设置回调函数
-	mContinuousPlate->SetOrigin(2, 2);//设置板块的原点
 	for (size_t x = 0; x < 4; x++)
 	{
 		for (size_t y = 0; y < 4; y++)
@@ -22,7 +21,8 @@ int main() {
 		}
 	}
 
-	auto F = [](ContinuousPlate<int>* LContinuousPlate) {
+
+	auto F = [](MovePlate<int>* LContinuousPlate) {
 		for (size_t x = 0; x < 4; x++)
 		{
 			for (size_t y = 0; y < 4; y++)
@@ -33,7 +33,7 @@ int main() {
 		}
 		std::cout << "=======================" << std::endl;
 		};
-
+	F(mContinuousPlate);
 	if (mContinuousPlate->UpData(0.1f, 1.0f)) {//更新检测位置
 		F(mContinuousPlate);
 	}
