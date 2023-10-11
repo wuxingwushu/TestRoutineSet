@@ -1,11 +1,11 @@
 #include <iostream>
+#include <omp.h>
 #include <vector>
 #include <queue>
 #include <cmath>
-#include "AStar.h"
+#include "JPS.h"
 #include <Windows.h>
 #include <profileapi.h>
-
 
 std::vector<std::vector<int>> map = {
 //   0  1  2  3  4  5  6  7  8  9  0  1  2  3  4  5
@@ -57,19 +57,20 @@ std::vector<std::vector<int>> map = {
     {0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0},
 };
 
+
 bool GetMap(int x, int y, void* P) {
-    if (x >= 0 && x < map.size() && y >= 0 && y < map[0].size()) {
-        return !map[x][y];
+    if (y >= 0 && y < map.size() && x >= 0 && x < map[0].size()) {
+        return !map[y][x];
     }
     return false;
 }
 
 
 int main() {
-    AStarVec2 start = { 4, 2 };
-    AStarVec2 target = { 0, 0 };
-    AStar* astar = new AStar(50,10000);
-    std::vector<AStarVec2> path;
+    JPSVec2 start = { 2, 4 };
+    JPSVec2 target = { 0, 0 };
+    JPS* astar = new JPS(50,10000);
+    std::vector<JPSVec2> path;
     astar->SetObstaclesCallback(GetMap, nullptr);
 
     LARGE_INTEGER freq; // 频率
@@ -79,25 +80,31 @@ int main() {
     QueryPerformanceFrequency(&freq);
     QueryPerformanceCounter(&t1);
 
-    // 执行一些操作w
+    // 执行一些操作
     for (size_t i = 0; i < 10000; i++)
     {
         path.clear();
         astar->FindPath(start, target, &path);
     }
+
+
+
     // 获取结束的计数器值
     QueryPerformanceCounter(&t2);
 
     // 计算经过的时间
     double elapsedTime = (double)(t2.QuadPart - t1.QuadPart) / freq.QuadPart;
     
+
+
     delete astar;
 
     std::cout << "路径：" << std::endl;
     for (int i = path.size() - 1; i >= 0; i--) {
-        map[path[i].x][path[i].y] = 2;
+        map[fabs(path[i].y)][fabs(path[i].x)] = 2;
         std::cout << "(" << path[i].x << ", " << path[i].y << ")" << std::endl;
     }
+        
 
     for (size_t i = 0; i < map.size(); i++)
     {
@@ -116,5 +123,13 @@ int main() {
         std::cout << std::endl;;
     }
     std::cout << "耗时：" << elapsedTime << std::endl;
+
+    std::cout << "parallel begin:\n";
+    int kaoddd = 2;//开启两个核心
+    #pragma omp parallel// num_threads(kaoddd)//多线程
+    {
+        std::cout << omp_get_thread_num() << " - ";
+    }
+    std::cout << "\n parallel end.\n";
     return 0;
 }

@@ -61,3 +61,7 @@ add_subdirectory(MovePlate build/MovePlate)
 add_subdirectory(virtual build/virtual)
 # 导入WFC项目
 add_subdirectory(WFC build/WFC)
+# 导入JPS项目
+add_subdirectory(JPS build/JPS)
+# 导入jps_grid项目
+add_subdirectory(jps_grid build/jps_grid)
