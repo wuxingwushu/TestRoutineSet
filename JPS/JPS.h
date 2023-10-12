@@ -1,5 +1,4 @@
 #pragma once
-
 #define JPS_MemoryPool
 //#include <set>
 #ifdef JPS_MemoryPool// 开启  内存池
@@ -17,24 +16,6 @@ enum class JPSDirection {
     LowerLeft,      //左下
     UpperRight,     //右上
     LowerRight      //右下
-};
-
-struct JPSNode {
-    int x;
-    int y;
-    float g;    // 累积代价
-    float h;    // 启发式代价
-    float f;    // 总代价
-    JPSNode* parent = nullptr;    //父节点
-    std::vector<JPSNode*> pChild{}; //子节点
-    JPSDirection Direction;
-    JPSNode(int _x, int _y, float _g, float _h, JPSNode* _parent, JPSDirection direction) : x(_x), y(_y), g(_g), h(_h), parent(_parent), Direction(direction){
-        f = g + h;
-    }
-
-    ~JPSNode()
-    {
-    }
 };
 
 struct JPSVec2 {
@@ -71,13 +52,30 @@ struct JPSVec2 {
     }
 };
 
-struct NodeData
+struct JPSNode : public JPSVec2 {
+    unsigned int g;    // 累积代价
+    unsigned int h;    // 启发式代价
+    unsigned int f;    // 总代价
+    JPSNode* parent = nullptr;      //父节点
+    std::vector<JPSNode*> pChild{}; //子节点
+    JPSDirection Direction;
+    JPSNode(int _x, int _y, unsigned int _g, unsigned int _h, JPSNode* _parent, JPSDirection direction) : JPSVec2{ _x, _y }, g(_g), h(_h), parent(_parent), Direction(direction) {
+        f = g + h;
+    }
+
+    ~JPSNode()
+    {
+    }
+};
+
+
+
+struct NodeData : public JPSVec2
 {
-    int x;
-    int y;
     JPSDirection Direction;
 
-    NodeData(int X, int Y, JPSDirection direction):x(X),y(Y), Direction(direction){}
+    NodeData(int X, int Y, JPSDirection direction) :JPSVec2{ X, Y }, Direction(direction) {}
+    NodeData(JPSVec2 pos, JPSDirection direction) :JPSVec2{ pos }, Direction(direction) {}
 
     bool operator<(const NodeData& other) const {
         return x < other.x || (x == other.x && y < other.y) || (x == other.x && y == other.y && Direction < other.Direction);
@@ -96,7 +94,6 @@ struct NodeDataHash {
         return h3 + (h2 << 1) + (h1 << 2);
     }
 };
-
 
 
 class JPS {
@@ -128,10 +125,6 @@ private:
         if (x >= -mRange && x < mRange && y >= -mRange && y < mRange) { return true; }
         else { return false; }
     }
-    bool Legitimacy2(int x, int y) {
-        if (x >= 0 && x < mRange * 2 && y >= 0 && y < mRange * 2) { return true; }
-        else { return false; }
-    }
 
     //调用回调函数
     bool isValid(int x, int y) {
@@ -142,22 +135,25 @@ private:
     }
 
     //计算代价
-    double calculateH(int x, int y, int targetX, int targetY) {
-        return fabs(x - targetX) + fabs(y - targetY);
+    unsigned int calculateH(int x, int y) {
+        return fabs(x - TargetPosition.x) + fabs(y - TargetPosition.y);
+    }
+    unsigned int calculateH(JPSVec2 pos) {
+        return fabs(pos.x - TargetPosition.x) + fabs(pos.y - TargetPosition.x);
     }
 
     //创建JPSNode
-    JPSNode* NewJPSNode(int _x, int _y, float _g, float _h, JPSNode* _parent, JPSDirection direction) { 
-#ifdef AStar_MemoryPool
-        return mMemoryPool.newElement(_x, _y, _g, _h, _parent, direction);
+    JPSNode* NewJPSNode(JPSVec2 pos, unsigned int _g, unsigned int _h, JPSNode* _parent, JPSDirection direction) {
+#ifdef JPS_MemoryPool
+        return mMemoryPool.newElement(pos.x, pos.y, _g, _h, _parent, direction);
 #else
-        return new JPSNode(_x, _y, _g, _h, _parent, direction);
+        return new JPSNode(pos.x, pos.y, _g, _h, _parent, direction);
 #endif
     }
 
     //销毁JPSNode
     void DeleteJPSNode(JPSNode* _parent) {
-#ifdef AStar_MemoryPool
+#ifdef JPS_MemoryPool
         mMemoryPool.deleteElement(_parent);
 #else
         delete _parent;
@@ -246,7 +242,7 @@ private:
         switch (Direction)
         {
         case JPSDirection::Upper:
-            if(isValid(pos.x - 1, pos.y))RadialNearLeft({ pos.x - 1, pos.y }, wParent);
+            if (isValid(pos.x - 1, pos.y))RadialNearLeft({ pos.x - 1, pos.y }, wParent);
             Scanning = true;
             if (isValid(pos.x + 1, pos.y))RadialNearRight({ pos.x + 1, pos.y }, wParent);
             break;
@@ -348,8 +344,7 @@ private:
             break;
         }
         if (EndPointJudge(CurrentPosition)) {
-            JPSNode* jiao = NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.414f, calculateH(CurrentPosition.x, CurrentPosition.y, TargetPosition.x, TargetPosition.y), wParent, wParent->Direction);
-            ParentJPSNode = jiao;
+            ParentJPSNode = NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition), wParent, wParent->Direction);
         }
     }
 
@@ -358,19 +353,19 @@ private:
         if (Skip.size() != 0 && Scanning) {
             Scanning = false;
             JPSVec2 LSpos = CurrentPosition - GetProgramme(ParentD->Direction);
-            JPSNode* jiao = NewJPSNode(LSpos.x, LSpos.y, 1.414f, calculateH(LSpos.x, LSpos.y, TargetPosition.x, TargetPosition.y), ParentD, ParentD->Direction);
+            JPSNode* jiao = NewJPSNode(LSpos, 0, calculateH(LSpos), ParentD, ParentD->Direction);
             ParentD->pChild.push_back(jiao);
             JPSVec2 LSpos2 = LSpos - posd;
             if (fabs(LSpos2.x) > 1 || fabs(LSpos2.y) > 1) {
                 if (fabs(LSpos2.x) > 1) {
-                    ParentD = NewJPSNode(LSpos.x + (LSpos2.x < 0 ? 1 : -1), posd.y, 1.414f, calculateH(LSpos.x + (LSpos2.x < 0 ? 1 : -1), posd.y, TargetPosition.x, TargetPosition.y), jiao, Direction);
+                    ParentD = NewJPSNode({ LSpos.x + (LSpos2.x < 0 ? 1 : -1), posd.y }, 1, calculateH(LSpos.x + (LSpos2.x < 0 ? 1 : -1), posd.y), jiao, Direction);
                 }
                 else {
-                    ParentD = NewJPSNode(posd.x, LSpos.y + (LSpos2.y < 0 ? 1 : -1), 1.414f, calculateH(posd.x, LSpos.y + (LSpos2.y < 0 ? 1 : -1), TargetPosition.x, TargetPosition.y), jiao, Direction);
+                    ParentD = NewJPSNode({ posd.x, LSpos.y + (LSpos2.y < 0 ? 1 : -1) }, 1, calculateH(posd.x, LSpos.y + (LSpos2.y < 0 ? 1 : -1)), jiao, Direction);
                 }
             }
             else {
-                ParentD = NewJPSNode(posd.x, posd.y, 1.414f, calculateH(posd.x, posd.y, TargetPosition.x, TargetPosition.y), jiao, Direction);
+                ParentD = NewJPSNode(posd, 1, calculateH(posd), jiao, Direction);
             }
             jiao->pChild.push_back(ParentD);
             mJPSDirectionVec2 = &ParentD->pChild;
@@ -393,25 +388,25 @@ private:
     //上
     void RadialNearUpper(JPSVec2 pos, JPSNode* Parent) {
         if (EndPointJudge(pos)) {
-            JPSNode* jiao = NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.414f, calculateH(CurrentPosition.x, CurrentPosition.y, TargetPosition.x, TargetPosition.y), Parent, Parent->Direction);
-            ParentJPSNode = NewJPSNode(pos.x, pos.y, 0, 0, jiao, JPSDirection::UpperLeft);
+            JPSNode* jiao = NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition), Parent, Parent->Direction);
+            ParentJPSNode = NewJPSNode(pos, 0, 0, jiao, JPSDirection::UpperLeft);
             return;
         }
         std::vector<JPSNode*> LSJPSDirectionVec2;
         if (!isValid(pos.x - 1, pos.y) && isValid(pos.x - 1, pos.y + 1))//左上强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::UpperLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y + 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::UpperLeft));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::UpperLeft });
+            if (RepeatJudge.find({ pos, JPSDirection::UpperLeft }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x - 1, pos.y + 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperLeft));
+                RepeatJudge.insert({ pos, JPSDirection::UpperLeft });
             }
         }
         if (!isValid(pos.x + 1, pos.y) && isValid(pos.x + 1, pos.y + 1))//右上强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::UpperRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y + 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::UpperRight));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::UpperRight });
+            if (RepeatJudge.find({ pos, JPSDirection::UpperRight }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x + 1, pos.y + 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperRight));
+                RepeatJudge.insert({ pos, JPSDirection::UpperRight });
             }
         }
         Parent = AddSkipPoint(pos, Parent, LSJPSDirectionVec2, JPSDirection::Upper);
@@ -423,26 +418,25 @@ private:
     //下
     void RadialNearLower(JPSVec2 pos, JPSNode* Parent) {
         if (EndPointJudge(pos)) {
-            JPSNode* jiao = NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.414f, calculateH(CurrentPosition.x, CurrentPosition.y, TargetPosition.x, TargetPosition.y), Parent, Parent->Direction);
-            jiao = NewJPSNode(pos.x, pos.y, 0, 0, jiao, JPSDirection::UpperLeft);
-            ParentJPSNode = jiao;
+            JPSNode* jiao = NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition), Parent, Parent->Direction);
+            ParentJPSNode = NewJPSNode(pos, 0, 0, jiao, JPSDirection::UpperLeft);
             return;
         }
         std::vector<JPSNode*> LSJPSDirectionVec2;
         if (!isValid(pos.x - 1, pos.y) && isValid(pos.x - 1, pos.y - 1))//左下强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::LowerLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y - 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::LowerLeft));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::LowerLeft });
+            if (RepeatJudge.find({ pos, JPSDirection::LowerLeft }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x - 1, pos.y - 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerLeft));
+                RepeatJudge.insert({ pos, JPSDirection::LowerLeft });
             }
         }
         if (!isValid(pos.x + 1, pos.y) && isValid(pos.x + 1, pos.y - 1))//右下强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::LowerRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y - 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::LowerRight));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::LowerRight });
+            if (RepeatJudge.find({ pos, JPSDirection::LowerRight }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x + 1, pos.y - 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerRight));
+                RepeatJudge.insert({ pos, JPSDirection::LowerRight });
             }
         }
         Parent = AddSkipPoint(pos, Parent, LSJPSDirectionVec2, JPSDirection::Lower);
@@ -454,26 +448,25 @@ private:
     //左
     void RadialNearLeft(JPSVec2 pos, JPSNode* Parent) {
         if (EndPointJudge(pos)) {
-            JPSNode* jiao = NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.414f, calculateH(CurrentPosition.x, CurrentPosition.y, TargetPosition.x, TargetPosition.y), Parent, Parent->Direction);
-            jiao = NewJPSNode(pos.x, pos.y, 0, 0, jiao, JPSDirection::UpperLeft);
-            ParentJPSNode = jiao;
+            JPSNode* jiao = NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition), Parent, Parent->Direction);
+            ParentJPSNode = NewJPSNode(pos, 0, 0, jiao, JPSDirection::UpperLeft);
             return;
         }
         std::vector<JPSNode*> LSJPSDirectionVec2;
         if (!isValid(pos.x, pos.y - 1) && isValid(pos.x - 1, pos.y - 1))//左下强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::LowerLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y - 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::LowerLeft));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::LowerLeft });
+            if (RepeatJudge.find({ pos, JPSDirection::LowerLeft }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x - 1, pos.y - 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerLeft));
+                RepeatJudge.insert({ pos, JPSDirection::LowerLeft });
             }
         }
         if (!isValid(pos.x, pos.y + 1) && isValid(pos.x - 1, pos.y + 1))//左上强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::UpperLeft }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x - 1, pos.y + 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::UpperLeft));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::UpperLeft });
+            if (RepeatJudge.find({ pos, JPSDirection::UpperLeft }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x - 1, pos.y + 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperLeft));
+                RepeatJudge.insert({ pos, JPSDirection::UpperLeft });
             }
         }
         Parent = AddSkipPoint(pos, Parent, LSJPSDirectionVec2, JPSDirection::Left);
@@ -485,26 +478,25 @@ private:
     //右
     void RadialNearRight(JPSVec2 pos, JPSNode* Parent) {
         if (EndPointJudge(pos)) {
-            JPSNode* jiao = NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.414f, calculateH(CurrentPosition.x, CurrentPosition.y, TargetPosition.x, TargetPosition.y), Parent, Parent->Direction);
-            jiao = NewJPSNode(pos.x, pos.y, 0, 0, jiao, JPSDirection::UpperLeft);
-            ParentJPSNode = jiao;
+            JPSNode* jiao = NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition), Parent, Parent->Direction);
+            ParentJPSNode = NewJPSNode(pos, 0, 0, jiao, JPSDirection::UpperLeft);
             return;
         }
         std::vector<JPSNode*> LSJPSDirectionVec2;
         if (!isValid(pos.x, pos.y - 1) && isValid(pos.x + 1, pos.y - 1))//右下强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::LowerRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y - 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::LowerRight));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::LowerRight });
+            if (RepeatJudge.find({ pos, JPSDirection::LowerRight }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x + 1, pos.y - 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::LowerRight));
+                RepeatJudge.insert({ pos, JPSDirection::LowerRight });
             }
         }
         if (!isValid(pos.x, pos.y + 1) && isValid(pos.x + 1, pos.y + 1))//右上强制邻近点
         {
-            if (RepeatJudge.find({ pos.x, pos.y, JPSDirection::UpperRight }) == RepeatJudge.end()) {
-                float newH = calculateH(pos.x + 1, pos.y + 1, TargetPosition.x, TargetPosition.y);
-                LSJPSDirectionVec2.push_back(NewJPSNode(pos.x, pos.y, 1.414f, newH, Parent, JPSDirection::UpperRight));
-                RepeatJudge.insert({ pos.x, pos.y, JPSDirection::UpperRight });
+            if (RepeatJudge.find({ pos, JPSDirection::UpperRight }) == RepeatJudge.end()) {
+                float newH = calculateH(pos.x + 1, pos.y + 1);
+                LSJPSDirectionVec2.push_back(NewJPSNode(pos, 2, newH, Parent, JPSDirection::UpperRight));
+                RepeatJudge.insert({ pos, JPSDirection::UpperRight });
             }
         }
         Parent = AddSkipPoint(pos, Parent, LSJPSDirectionVec2, JPSDirection::Right);
@@ -561,36 +553,34 @@ public:
         TargetPosition = target - start;
         CurrentPosition = { 0, 0 };
         RepeatJudge.clear();
-        
-        JPSNode* LSDEJPSNode = NewJPSNode(CurrentPosition.x, CurrentPosition.y, 0.0f, 0.0f, nullptr, JPSDirection::Upper);
-        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Upper))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.0f, calculateH(CurrentPosition.x, CurrentPosition.y + 1, TargetPosition.x, TargetPosition.y), LSDEJPSNode, JPSDirection::Upper));
-        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Lower))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.0f, calculateH(CurrentPosition.x, CurrentPosition.y - 1, TargetPosition.x, TargetPosition.y), LSDEJPSNode, JPSDirection::Lower));
-        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Left ))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.0f, calculateH(CurrentPosition.x - 1, CurrentPosition.y, TargetPosition.x, TargetPosition.y), LSDEJPSNode, JPSDirection::Left ));
-        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::Right))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition.x, CurrentPosition.y, 1.0f, calculateH(CurrentPosition.x + 1, CurrentPosition.y, TargetPosition.x, TargetPosition.y), LSDEJPSNode, JPSDirection::Right));
-        std::sort(LSDEJPSNode->pChild.begin(), LSDEJPSNode->pChild.end(),
-            [](JPSNode* a, JPSNode* b) {
-                return a->f > b->f;
-            }
-        );
+
+        JPSNode* LSDEJPSNode = NewJPSNode(CurrentPosition, 0, 0, nullptr, JPSDirection::Upper);
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::UpperLeft))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x - 1, CurrentPosition.y + 1), LSDEJPSNode, JPSDirection::UpperLeft));
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::LowerLeft))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x - 1, CurrentPosition.y - 1), LSDEJPSNode, JPSDirection::LowerLeft));
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::UpperRight))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x + 1, CurrentPosition.y + 1), LSDEJPSNode, JPSDirection::UpperRight));
+        if (GetDirectionLegitimate(CurrentPosition, JPSDirection::LowerRight))LSDEJPSNode->pChild.push_back(NewJPSNode(CurrentPosition, 0, calculateH(CurrentPosition.x + 1, CurrentPosition.y - 1), LSDEJPSNode, JPSDirection::LowerRight));
+        NodeSort(LSDEJPSNode);
 
         JPSNode* DeleteJPSNodeX;
-        
+
         do
         {
             if (LSDEJPSNode->pChild.size() != 0) {
                 DeleteJPSNodeX = LSDEJPSNode->pChild.back();
                 LSDEJPSNode->pChild.pop_back();
                 LSDEJPSNode = DeleteJPSNodeX;
-                ParentJPSNode = LSDEJPSNode;//绑定父类
 
-                mJPSDirectionVec2 = &LSDEJPSNode->pChild;
-                CurrentPosition = { LSDEJPSNode->x, LSDEJPSNode->y };
-                if (mJPSDirectionVec2->size() == 0) {
-                    //RadialEvent(CurrentPosition, LSDEJPSNode, LSDEJPSNode->Direction);
+                if (LSDEJPSNode->pChild.size() == 0) {
+                    ParentJPSNode = LSDEJPSNode;//绑定父类
+                    mJPSDirectionVec2 = &LSDEJPSNode->pChild;
+                    CurrentPosition = { LSDEJPSNode->x, LSDEJPSNode->y };
+                    RadialEvent(CurrentPosition, LSDEJPSNode, LSDEJPSNode->Direction);
                     while (GetDirectionLegitimate(CurrentPosition, LSDEJPSNode->Direction)) {
                         MoveEvent(CurrentPosition, LSDEJPSNode, LSDEJPSNode->Direction);
                     }
-
+                    if (Finish) {
+                        break;
+                    }
                     if (LSDEJPSNode->pChild.size() == 0) {
                         DeleteJPSNodeX = LSDEJPSNode;
                         LSDEJPSNode = LSDEJPSNode->parent;
@@ -599,9 +589,6 @@ public:
                     else {
                         NodeSort(LSDEJPSNode);
                     }
-                }
-                if (Finish) {
-                    break;
                 }
             }
             else {
@@ -613,7 +600,15 @@ public:
         if (LSDEJPSNode != nullptr) {
             PathVector->push_back({ ParentJPSNode->x + StartingPoint.x, ParentJPSNode->y + StartingPoint.y });
             if (ParentJPSNode->parent->pChild.size() != 0) {
-                if (ParentJPSNode->parent->pChild.back() != ParentJPSNode) {//和最后一个元素不重复
+                bool cf = true;
+                for (auto i : ParentJPSNode->parent->pChild)
+                {
+                    if (i == ParentJPSNode) {//元素是否重复
+                        cf = false;
+                        break;
+                    }
+                }
+                if (cf) {
                     ParentJPSNode->parent->pChild.push_back(ParentJPSNode);//添加到多叉树
                 }
             }
@@ -636,7 +631,15 @@ public:
                 }
                 else {
                     if (ParentJPSNode->parent->pChild.size() != 0) {
-                        if (ParentJPSNode->parent->pChild.back() != ParentJPSNode) {//和最后一个元素不重复
+                        bool cf = true;
+                        for (auto i : ParentJPSNode->parent->pChild)
+                        {
+                            if (i == ParentJPSNode) {//元素是否重复
+                                cf = false;
+                                break;
+                            }
+                        }
+                        if (cf) {
                             ParentJPSNode->parent->pChild.push_back(ParentJPSNode);//添加到多叉树
                         }
                     }
