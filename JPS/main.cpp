@@ -123,6 +123,7 @@ int main() {
         std::cout << std::endl;;
     }
     std::cout << "耗时：" << elapsedTime << std::endl;
+    std::cout << t1.QuadPart << " - " << t2.QuadPart << " - " << freq.QuadPart << std::endl;
 
     std::cout << "parallel begin:\n";
     int kaoddd = 2;//开启两个核心

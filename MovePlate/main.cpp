@@ -34,22 +34,22 @@ int main() {
 		std::cout << "=======================" << std::endl;
 		};
 	F(mContinuousPlate);
-	if (mContinuousPlate->UpData(0.1f, 1.0f)) {//更新检测位置
+	if (mContinuousPlate->UpData(0.1f, 1.0f).UpData) {//更新检测位置
 		F(mContinuousPlate);
 	}
-	if (mContinuousPlate->UpData(0.1f, 2.0f)) {//更新检测位置
+	if (mContinuousPlate->UpData(0.1f, 2.0f).UpData) {//更新检测位置
 		F(mContinuousPlate);
 	}
-	if (mContinuousPlate->UpData(0.1f, 3.0f)) {//更新检测位置
+	if (mContinuousPlate->UpData(0.1f, 1.0f).UpData) {//更新检测位置
 		F(mContinuousPlate);
 	}
-	if (mContinuousPlate->UpData(0.1f, 4.0f)) {//更新检测位置
+	if (mContinuousPlate->UpData(0.1f, 4.0f).UpData) {//更新检测位置
 		F(mContinuousPlate);
 	}
-	if (mContinuousPlate->UpData(0.1f, 5.0f)) {//更新检测位置
+	if (mContinuousPlate->UpData(1.1f, 5.0f).UpData) {//更新检测位置
 		F(mContinuousPlate);
 	}
-	if (mContinuousPlate->UpData(1.1f, 5.0f)) {//更新检测位置
+	if (mContinuousPlate->UpData(0.1f, 5.0f).UpData) {//更新检测位置
 		F(mContinuousPlate);
 	}
 	

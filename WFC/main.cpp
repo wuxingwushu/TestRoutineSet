@@ -316,7 +316,7 @@ void read_config_file(const string& config_path) noexcept {
     }
 }
 
-int main() {
+int main1() {
 
     // Initialize rand for non-linux targets
 #ifndef __linux__
@@ -336,4 +336,76 @@ int main() {
         .count();
     std::cout << "All samples done in " << elapsed_s << "s, " << elapsed_ms % 1000
         << "ms.\n";
+    return 0;
+}
+
+
+int main() {
+    unsigned N = 8;
+    bool periodic_output = true;
+    bool periodic_input = true;
+    bool ground = false;
+    unsigned symmetry = 8;
+    unsigned screenshots = 2;
+    unsigned width = 48;
+    unsigned height = 48;
+
+
+    Array2D<int> kao(12, 12);
+
+    int ditu[] = {
+        0,0,0,0,0,0,0,0,0,0,0,0,
+        1,0,0,0,1,0,0,0,0,0,0,0,
+        1,0,0,0,1,0,0,0,0,0,0,0,
+        1,0,0,0,1,1,1,1,1,1,0,0,
+        1,0,0,0,1,0,0,0,1,0,0,0,
+        1,0,0,0,1,0,0,0,1,0,0,0,
+        1,1,1,1,1,0,0,0,1,1,1,0,
+        0,0,0,0,0,0,0,0,1,0,0,0,
+        0,0,0,0,0,0,0,0,1,0,0,0,
+        0,0,1,1,1,1,1,1,1,0,0,0,
+        0,0,0,0,0,1,0,0,0,0,0,0,
+        0,0,0,0,0,1,0,0,0,0,0,0,
+    };
+
+    for (size_t i = 0; i < (12 * 12); i++)
+    {
+        kao.data[i] = ditu[i];
+    }
+
+    for (size_t x = 0; x < 12; x++)
+    {
+        for (size_t y = 0; y < 12; y++)
+        {
+            std::cout << kao.data[x * 12 + y];
+        }
+        std::cout << std::endl;
+    }
+
+    std::cout << "+++++++++++++++++++++++++++++++" << std::endl;
+
+    std::optional<Array2D<int>> m = kao;
+
+
+
+    OverlappingWFCOptions options = {
+       periodic_input, periodic_output, height, width, symmetry, ground, N };
+    int seed = rand();
+    OverlappingWFC<int> wfc(*m, options, seed);
+
+    std::optional<Array2D<int>> success = wfc.run();
+
+    Array2D<int> da = success.value();
+
+    for (size_t x = 0; x < width; x++)
+    {
+        for (size_t y = 0; y < height; y++)
+        {
+            std::cout << da.data[x * height + y];
+        }
+        std::cout << std::endl;
+    }
+
+
+    return 0;
 }

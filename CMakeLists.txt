@@ -65,3 +65,7 @@ add_subdirectory(WFC build/WFC)
 add_subdirectory(JPS build/JPS)
 # 导入jps_grid项目
 add_subdirectory(jps_grid build/jps_grid)
+# 导入jps_grid项目
+add_subdirectory(FastNoiseLite build/FastNoiseLite)
+# 导入jps_grid项目
+add_subdirectory(Freetype build/Freetype)

@@ -96,6 +96,7 @@ struct NodeDataHash {
 };
 
 
+
 class JPS {
 private:
     //std::set<NodeData> RepeatJudge;     //有过的跳点
@@ -546,11 +547,15 @@ public:
 
     //开始寻路
     void FindPath(JPSVec2 start, JPSVec2 target, std::vector<JPSVec2>* PathVector) {
+        //目标地点合法性
+        TargetPosition = target - start;
+        StartingPoint = start;
+        if (!isValid(TargetPosition.x, TargetPosition.y)) {
+            return;
+        }
         //开始寻路
         mPathfindingCompleted = false;
         Finish = false;
-        StartingPoint = start;
-        TargetPosition = target - start;
         CurrentPosition = { 0, 0 };
         RepeatJudge.clear();
 
