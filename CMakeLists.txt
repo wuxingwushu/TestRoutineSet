@@ -69,3 +69,5 @@ add_subdirectory(jps_grid build/jps_grid)
 add_subdirectory(FastNoiseLite build/FastNoiseLite)
 # 导入jps_grid项目
 add_subdirectory(Freetype build/Freetype)
+# 导入jps_grid项目
+add_subdirectory(TTF_bin build/TTF_bin)
