@@ -77,3 +77,5 @@ add_subdirectory(Dithering build/Dithering)
 add_subdirectory(QRCode build/QRCode)
 # 导入ANN项目
 add_subdirectory(ANN build/ANN)
+# 导入Hough项目
+add_subdirectory(Hough build/Hough)
