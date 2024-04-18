@@ -1,6 +1,6 @@
 #pragma once
 #include <map>
-#define TimerWindowsTime
+//#define TimerWindowsTime
 #ifdef TimerWindowsTime
 #include <Windows.h>
 #include <profileapi.h>

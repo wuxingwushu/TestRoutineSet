@@ -96,7 +96,7 @@ namespace TOOL {
 #ifdef TOOL_Convert
 	std::string StrTolower(std::string Str);
 	std::string StrName(std::string Str);
-	void FilePath(const char* path, std::vector<std::string>* strS, const char* Suffix, const char* Name, int* Index);
+	void FilePath(const char* path, std::vector<std::string>* strS, const char* Suffix, const char* Name = "", int* Index = nullptr);
 
 	void* memcpyf(void* dest, const void* src, size_t n, size_t b);//反方向复制，
 

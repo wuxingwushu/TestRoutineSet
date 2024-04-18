@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(ClassCallback)
+project(MechanicalArm)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -28,8 +28,8 @@ else()
 endif()
 
 # 将源文件添加到可执行文件中
-add_executable(ClassCallback ${DIRSRCS})
+add_executable(MechanicalArm ${DIRSRCS})
 
 target_link_libraries(
-	ClassCallback
+	MechanicalArm
 )

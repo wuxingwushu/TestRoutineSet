@@ -50,6 +50,7 @@ endif()
 
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}./../src/ImGui/Minecraft_AE.ttf ${CMAKE_CURRENT_BINARY_DIR})# 字体
 execute_process(COMMAND ${CMAKE_COMMAND} -E copy ${PROJECT_SOURCE_DIR}./45deg.jpg ${CMAKE_CURRENT_BINARY_DIR})
+execute_process(COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}./img ${CMAKE_CURRENT_BINARY_DIR}./img)
 # 在 FastNoiseLite 以及添加过一次了不需要在添加 直接 target_link_libraries 导入对应的Lib
 # add_subdirectory(${CMAKE_SOURCE_DIR}/src ${CMAKE_BINARY_DIR}/src)
 # add_subdirectory(${CMAKE_SOURCE_DIR}/src/Vulkan ${CMAKE_BINARY_DIR}/src/Vulkan)

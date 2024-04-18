@@ -1,81 +1,69 @@
 cmake_minimum_required(VERSION 3.5)
 
 
-# 导入TCPA项目
+# TCPA/B 网络连接交换数据
 add_subdirectory(TCPA build/TCPA)
-# 导入TCPB项目
 add_subdirectory(TCPB build/TCPB)
-# 导入Labyrinth项目
-add_subdirectory(Labyrinth build/Labyrinth)
-# 导入GenerateMaze项目
-add_subdirectory(GenerateMaze build/GenerateMaze)
-# 导入VUH项目
-add_subdirectory(VUH build/VUH)
-# 导入Brensenham项目
-add_subdirectory(Brensenham build/Brensenham)
-# 导入Kompute项目
-add_subdirectory(Kompute build/Kompute)
-# 导入VulKan_Mandelbrot项目
-add_subdirectory(VulKan_Mandelbrot build/VulKan_Mandelbrot)
-# 导入MIDI项目
-add_subdirectory(MIDI build/MIDI)
-# 导入SoloudMIDI项目
-add_subdirectory(SoloudMIDI build/SoloudMIDI)
-# 导入ClassCallback项目
-add_subdirectory(ClassCallback build/ClassCallback)
-# 导入C++Rasterization项目
-add_subdirectory(C++Rasterization build/C++Rasterization)
-# 导入Quadtree项目
-add_subdirectory(Quadtree build/Quadtree)
-# 导入RedBlackTree项目
-add_subdirectory(RedBlackTree build/RedBlackTree)
-# 导入Timer项目
-add_subdirectory(Timer build/Timer)
-# 导入ContinuousPlate项目
-add_subdirectory(ContinuousPlate build/ContinuousPlate)
-# 导入test_buffer_filter_zlib项目
+# event2 建立 TCP 连接 zlib 压缩传输的数据
 add_subdirectory(test_buffer_filter_zlib build/test_buffer_filter_zlib)
-# 导入TCPClientFilter项目
+# TCP Client Filter(过滤器压缩数据量)
 add_subdirectory(TCPClientFilter build/TCPClientFilter)
-# 导入TCPServerFilter项目
 add_subdirectory(TCPServerFilter build/TCPServerFilter)
-# 导入AngelScript项目
+# 迷宫生成
+add_subdirectory(Labyrinth build/Labyrinth)
+add_subdirectory(GenerateMaze build/GenerateMaze)
+# GPU计算 两个库
+add_subdirectory(VUH build/VUH)
+add_subdirectory(Kompute build/Kompute)
+add_subdirectory(VulKan_Mandelbrot build/VulKan_Mandelbrot) # 纯VulKan GUP计算
+# Brensenham 直线
+add_subdirectory(Brensenham build/Brensenham)
+add_subdirectory(Dithering build/Dithering)# 不同直线实现效果
+# MIDI 项目
+add_subdirectory(MIDI build/MIDI)# sf2音色
+add_subdirectory(SoloudMIDI build/SoloudMIDI)# Soloud 支持 MIDI
+# C++ 实现 CPU光栅化
+add_subdirectory(C++Rasterization build/C++Rasterization)
+# 四叉树
+add_subdirectory(Quadtree build/Quadtree)
+# 二进制搜索树
+add_subdirectory(RedBlackTree build/RedBlackTree)
+# 耗时检测库
+add_subdirectory(Timer build/Timer)
+# 连续区块移动
+add_subdirectory(ContinuousPlate build/ContinuousPlate)
+add_subdirectory(MovePlate build/MovePlate)# 支持区块查询
+# AngelScript 天使脚本
 add_subdirectory(AngelScript build/AngelScript)
-# 导入DLL项目
+# DLL 函数 读取 调用
 add_subdirectory(DLL build/DLL)
-# 导入Curl_WedDav项目
+# 坚果云 WedDav
 add_subdirectory(Curl_WedDav build/Curl_WedDav)
 # 导入ReptilesYouDao项目
 add_subdirectory(ReptilesYouDao build/ReptilesYouDao)
-# 导入A_Star_Algorithm项目
+# A_Star 寻路算法
 add_subdirectory(A_Star_Algorithm build/A_Star_Algorithm)
-# 导入Trie项目
+add_subdirectory(JPS build/JPS)# A_Star 改良版 JPS 寻路
+add_subdirectory(jps_grid build/jps_grid)
+# 多叉树实现预测指令
 add_subdirectory(Trie build/Trie)
-# 导入BP项目
-add_subdirectory(BP build/BP)
-# 导入sml项目
+# 有限状态机
 add_subdirectory(sml build/sml)
-# 导入MovePlate项目
-add_subdirectory(MovePlate build/MovePlate)
-# 导入virtual项目
+# 类 的多态
 add_subdirectory(virtual build/virtual)
 # 导入WFC项目
 add_subdirectory(WFC build/WFC)
-# 导入JPS项目
-add_subdirectory(JPS build/JPS)
-# 导入jps_grid项目
-add_subdirectory(jps_grid build/jps_grid)
-# 导入FastNoiseLite项目
+# 柏林噪声
 add_subdirectory(FastNoiseLite build/FastNoiseLite)
-# 导入Freetype项目
+# 调用矢量字体
 add_subdirectory(Freetype build/Freetype)
-# 导入TTF_bin项目
-add_subdirectory(TTF_bin build/TTF_bin)
-# 导入Dithering项目
-add_subdirectory(Dithering build/Dithering)
-# 导入QRCode项目
+add_subdirectory(TTF_bin build/TTF_bin)# 矢量字体 生成 位图字体
+# 字符串生成二维码
 add_subdirectory(QRCode build/QRCode)
-# 导入ANN项目
+# 神经网络
+add_subdirectory(BP build/BP)
 add_subdirectory(ANN build/ANN)
-# 导入Hough项目
+# Hough识别矩形框
 add_subdirectory(Hough build/Hough)
+# 机械臂控制代码
+add_subdirectory(MechanicalArm build/MechanicalArm)

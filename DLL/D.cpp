@@ -7,7 +7,7 @@ DLLEXPORT void print(const char* P)//直接穿 string 会乱吗？
 {
     std::cout << "[Error]: " << P << std::endl;
     std::string kao = P;
-    std::cout << "[string]: " << kao << std::endl;
+    std::cout << "[const char]: " << kao << std::endl;
     return;
 }
 

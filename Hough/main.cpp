@@ -13,6 +13,12 @@
 #include "canny.hpp"
 #include "hough.h"
 #include "../src/VulkanTool/stb_image.h"
+#include "../src/Tool/Timer.h"
+#include "FindContours.h"
+#include "../src/Tool/Tool.h"
+
+
+Timer mTimer(10);
 
 
 VulKan::Window* mWindow{ nullptr };//创建窗口
@@ -34,7 +40,7 @@ std::vector<VulKan::Fence*> mFences{};//控制管线工作，比如（下一个�
 int mCurrentFrame{ 0 };//当前是渲染哪一张GPU画布
 
 
-int TextureW = 1920, TextureH = 1080;
+int TextureW = 5000, TextureH = 5000;
 
 
 //ImGui 错误信息回调函数
@@ -228,13 +234,11 @@ void Render() {
 }
 
 //转换为灰度图
-unsigned char* ConversionGrayscaleImage(unsigned char* img, unsigned int width, unsigned int height, unsigned int channels) {
-	unsigned char* gray_img = new unsigned char[width * height];
+void ConversionGrayscaleImage(unsigned char* outimg, unsigned char* img, unsigned int width, unsigned int height, unsigned int channels) {
 	for (int i = 0; i < (width * height); ++i) {
 		// 根据 RGB 分量计算灰度值
-		gray_img[i] = (unsigned char)(0.2126f * img[channels * i] + 0.7152f * img[channels * i + 1] + 0.0722f * img[channels * i + 2]);
+		outimg[i] = (unsigned char)(0.2126f * img[channels * i] + 0.7152f * img[channels * i + 1] + 0.0722f * img[channels * i + 2]);
 	}
-	return gray_img;
 }
 
 //模糊
@@ -271,7 +275,7 @@ void myBlur(const unsigned char* src, unsigned char* dst, int W, int H, int kern
 
 unsigned char* P = nullptr;
 // 模拟 GetPix 函数，打印每个点的像素坐标
-void GetPix(unsigned int x, unsigned int y, float D = 1.0f)
+void GetPix(unsigned int y, unsigned int x, float D = 1.0f)
 {
 	if (y >= TextureW)return;
 	if (x >= TextureH)return;
@@ -281,8 +285,18 @@ void GetPix(unsigned int x, unsigned int y, float D = 1.0f)
 	P[(x * TextureW + y) * 4 + 2] = 255 * D;
 	P[(x * TextureW + y) * 4 + 3] = 255 * D;
 }
+void GetPix2(unsigned int y, unsigned int x, float D = 1.0f)
+{
+	if (y >= TextureW)return;
+	if (x >= TextureH)return;
+	//std::cout << "x: " << x << ", y: " << y << std::endl;
+	P[(x * TextureW + y) * 4 + 0] = 255 * D;
+	P[(x * TextureW + y) * 4 + 1] = 255 * D;
+	P[(x * TextureW + y) * 4 + 2] = 255 * D;
+	P[(x * TextureW + y) * 4 + 3] = 255;
+}
 
-void GetPix(unsigned int x, unsigned int y, unsigned char* color)
+void GetPix(unsigned int y, unsigned int x, unsigned char* color)
 {
 	if (y >= TextureW)return;
 	if (x >= TextureH)return;
@@ -322,26 +336,363 @@ void Bresenham(int x1, int y1, int x2, int y2) {
 	}
 }
 
-int maxPy = 0;
+void Bresenham2(int x1, int y1, int x2, int y2) {
+	int dx = abs(x2 - x1);
+	int dy = abs(y2 - y1);
+	int sx = (x1 < x2) ? 1 : -1;
+	int sy = (y1 < y2) ? 1 : -1;
+	int err = dx - dy;
+	unsigned char clr[3] = { 255,0,0 };
+	GetPix(x1, y1, clr);
+	while (true) {
+		if (x1 == x2 && y1 == y2) {
+			break;
+		}
+
+		int e2 = 2 * err;
+
+		if (e2 > -dy) {
+			err -= dy;
+			x1 += sx;
+			GetPix(x1, y1, clr);
+		}
+
+		if (e2 < dx) {
+			err += dx;
+			y1 += sy;
+			GetPix(x1, y1, clr);
+		}
+	}
+}
+
+
+
+bool isRectangle(std::vector < std::pair<int, int>>& Spot) {
+	//坐标点按照顺时针排列
+	std::pair<float, float> Core = { Spot[0].first + Spot[1].first + Spot[2].first + Spot[3].first, Spot[0].second + Spot[1].second + Spot[2].second + Spot[3].second};
+	Core.first /= 4; Core.second /= 4;
+
+	std::vector<std::pair<float, float>> Angle;
+	Angle.push_back({ Spot[0].first - Core.first, Spot[0].second - Core.second });
+	Angle.push_back({ Spot[1].first - Core.first, Spot[1].second - Core.second });
+	Angle.push_back({ Spot[2].first - Core.first, Spot[2].second - Core.second });
+	Angle.push_back({ Spot[3].first - Core.first, Spot[3].second - Core.second });
+
+	for (size_t i = 0; i < Angle.size(); i++)
+	{
+		Angle[i].first = atan2(Angle[i].first, Angle[i].second);
+	}
+	int min = 0, max = 0;
+	for (size_t i = 0; i < Angle.size() - 1; i++)
+	{
+		if (Angle[min].first > Angle[i + 1].first) {
+			min = i + 1;
+		}
+		if (Angle[max].first < Angle[i + 1].first) {
+			max = i + 1;
+		}
+	}
+	if (min != 0) {
+		std::swap(Angle[min].first, Angle[0].first);
+		std::swap(Spot[min], Spot[0]);
+	}
+	if (max != (Angle.size() - 1)) {
+		std::swap(Angle[max].first, Angle[Angle.size() - 1].first);
+		std::swap(Spot[max], Spot[Angle.size() - 1]);
+	}
+	if (Angle[1].first > Angle[2].first) {
+		std::swap(Spot[1], Spot[2]);
+	}
+
+	// 判断四个点是否构成矩形
+	double d1 = sqrt((Spot[0].first - Spot[1].first) * (Spot[0].first - Spot[1].first) + (Spot[0].second - Spot[1].second) * (Spot[0].second - Spot[1].second));
+	double d3 = sqrt((Spot[2].first - Spot[3].first) * (Spot[2].first - Spot[3].first) + (Spot[2].second - Spot[3].second) * (Spot[2].second - Spot[3].second));
+	d1 -= d3;
+	if (fabs(d1) > 15) return false;
+
+	double d2 = sqrt((Spot[1].first - Spot[2].first) * (Spot[1].first - Spot[2].first) + (Spot[1].second - Spot[2].second) * (Spot[1].second - Spot[2].second));
+	double d4 = sqrt((Spot[3].first - Spot[0].first) * (Spot[3].first - Spot[0].first) + (Spot[3].second - Spot[0].second) * (Spot[3].second - Spot[0].second));
+	d2 -= d4;
+	if (fabs(d2) > 15) return false;
+
+	double diagonal1 = sqrt((Spot[0].first - Spot[2].first) * (Spot[0].first - Spot[2].first) + (Spot[0].second - Spot[2].second) * (Spot[0].second - Spot[2].second));
+	double diagonal2 = sqrt((Spot[1].first - Spot[3].first) * (Spot[1].first - Spot[3].first) + (Spot[1].second - Spot[3].second) * (Spot[1].second - Spot[3].second));
+	diagonal1 -= diagonal2;
+	return (fabs(diagonal1) < 15);
+}
+
+std::pair<int, int> findIntersection(const std::pair<int, int>& p1, const std::pair<int, int>& p2, const std::pair<int, int>& p3, const std::pair<int, int>& p4) {
+	// 计算两条直线的交点
+	double a1 = p2.second - p1.second;
+	double b1 = p1.first - p2.first;
+	double c1 = a1 * p1.first + b1 * p1.second;
+
+	double a2 = p4.second - p3.second;
+	double b2 = p3.first - p4.first;
+	double c2 = a2 * p3.first + b2 * p3.second;
+
+	double det = a1 * b2 - a2 * b1;
+	if (det == 0) {
+		// 平行线没有交点
+		return { 0, 0 };
+	}
+	else {
+		double x = (b2 * c1 - b1 * c2) / det;
+		double y = (a1 * c2 - a2 * c1) / det;
+		return { x, y };
+	}
+}
+
+//判断该点是否成立
+bool dian_Establish(unsigned char* img, unsigned int h, unsigned int w, std::pair<int, int> Dian, int Bchang) {
+	bool Collision = false;
+	int x1, x2, y1, y2;
+	x1 = (Dian.first - Bchang);
+	y1 = (Dian.second - Bchang);
+	if (x1 < 0) x1 = 0;
+	if (y1 < 0) y1 = 0;
+	x2 = (Dian.first + Bchang);
+	y2 = (Dian.second + Bchang);
+	if (x2 > w) x2 = w;
+	if (y2 > h) x2 = h;
+	for (int x = x1; x < x2; ++x)
+	{
+		for (int y = y1; y < y2; ++y)
+		{
+			if (img[(y * w) + x] > 150) {
+				Collision = true;
+				return Collision;
+			}
+		}
+	}
+	return Collision;
+}
+
+std::vector<unsigned char> BoxImg(unsigned char* Data, unsigned int x, unsigned int y, unsigned int w, unsigned int h, unsigned int Yw) {
+	std::vector<unsigned char> Img(w * h);
+	w = x + w;
+	h = y + h;
+	int s = 0;
+	for (size_t j = y; j < h; j++)
+	{
+		for (size_t i = x; i < w; i++)
+		{
+			Img[s] = Data[(j * Yw) + i];
+			++s;
+		}
+	}
+	return Img;
+}
+
+void Dithering(unsigned char* Data, unsigned int w, unsigned int h) {
+
+	int pixX = TextureW - w;
+	int pixY = TextureH - h;
+	// 进行抖动处理
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
+			// 根据阈值进行二值化
+			unsigned char threshold = (Data[y * w + x] > 128) ? 255 : 0;
+
+			// 计算误差
+			int error = static_cast<int>(Data[y * w + x]) - threshold;
+
+			// 将误差传播到相邻像素
+			if (x < w - 1) {
+				if (Data[y * w + x + 1] + error * 7 / 16 > 255) {
+					Data[y * w + x + 1] = 255;
+				}
+				else if (Data[y * w + x + 1] + error * 7 / 16 < 0) {
+					Data[y * w + x + 1] = 0;
+				}
+				else {
+					Data[y * w + x + 1] += error * 7 / 16;
+				}
+			}
+			if (y < h - 1) {
+				if (x > 0) {
+					if (Data[(y + 1) * w + x - 1] + error * 3 / 16 > 255) {
+						Data[(y + 1) * w + x - 1] = 255;
+					}
+					else if (Data[(y + 1) * w + x - 1] + error * 3 / 16 < 0) {
+						Data[(y + 1) * w + x - 1] = 0;
+					}
+					else {
+						Data[(y + 1) * w + x - 1] += error * 3 / 16;
+					}
+				}
+				if (Data[(y + 1) * w + x] + error * 5 / 16 > 255) {
+					Data[(y + 1) * w + x] = 255;
+				}
+				else if (Data[(y + 1) * w + x] + error * 5 / 16 < 0) {
+					Data[(y + 1) * w + x] = 0;
+				}
+				else {
+					Data[(y + 1) * w + x] += error * 5 / 16;
+				}
+				if (x < w - 1) {
+					if (Data[(y + 1) * w + x + 1] + error * 1 / 16 > 255) {
+						Data[(y + 1) * w + x + 1] = 255;
+					}
+					else if (Data[(y + 1) * w + x + 1] + error * 1 / 16 < 0) {
+						Data[(y + 1) * w + x + 1] = 0;
+					}
+					else {
+						Data[(y + 1) * w + x + 1] += error * 1 / 16;
+					}
+				}
+			}
+
+			// 设置像素值
+			Data[y * w + x] = threshold;
+			GetPix2(pixX + x, pixY + y, float(threshold) / 255);
+		}
+	}
+}
+
+
+
+
+const char Info_1[] = R"(const unsigned char ImgD[][3813] = {)";
+const char Info_2[] = R"(
+};)";
+std::string IMGSTR{};
+void ImgData(unsigned char* Data, unsigned int w, unsigned int h) {
+	unsigned char S = 0;
+	unsigned char N = 0;
+	unsigned char color = 0;
+	IMGSTR += "\n{\n\t";
+	for (size_t i = 0; i < w * h; i++)
+	{
+		++S;
+		if (Data[i] == 255)color += 0x01;
+		color = color << 1;
+		if (S == 8) {
+			S = 0;
+			IMGSTR += std::to_string(int(color)) + ",";
+			color = 0;
+			++N;
+			if (N == 32) {
+				IMGSTR += "\n\t";
+				N = 0;
+			}
+		}
+	}
+	if (S != 0) {
+		IMGSTR += std::to_string(int(color));
+	}
+	IMGSTR += "\n},";
+}
+
+
+std::vector<unsigned char> resizeImage(unsigned char* inputImage, int inWidth, int inHeight, int newWidth, int newHeight)
+{
+	std::vector<unsigned char> Img(newWidth * newHeight);
+	// 增加权重和像素值变量
+	double weight, pixelValue;
+	// 根据需要分配新图像数据内存，假设每个像素占用一个字节
+	int pixX = TextureW - newWidth;
+	int pixY = TextureH - newHeight;
+	double widthRatio = static_cast<double>(inWidth) / newWidth;
+	double heightRatio = static_cast<double>(inHeight) / newHeight;
+	int s = 0;
+	for (int i = 0; i < newHeight; ++i)
+	{
+		for (int j = 0; j < newWidth; ++j)
+		{
+			int sum = 0;
+			double totalWeight = 0.0; // 总权重
+			for (int y = static_cast<int>(i * heightRatio); y < static_cast<int>((i + 1) * heightRatio); ++y)
+			{
+				for (int x = static_cast<int>(j * widthRatio); x < static_cast<int>((j + 1) * widthRatio); ++x)
+				{
+					// 假设图像数据是灰度图，每个像素占用一个字节
+					weight = (1.0 - std::abs(j * widthRatio - x)) * (1.0 - std::abs(i * heightRatio - y)); // 根据距离计算权重
+					pixelValue = inputImage[y * inWidth + x]; // 获取像素值
+					sum += static_cast<int>(weight * pixelValue);
+					totalWeight += weight;
+				}
+			}
+			// 将计算得到的平均值存储到新图像数据中
+			//GetPix2(pixX + j, pixY + i, float(static_cast<char>(sum / totalWeight)) / 255);
+			Img[s] = static_cast<char>(sum / totalWeight);
+			++s;
+		}
+	}
+	return Img;
+}
+
+int maxPy = 1000;
 int maxa = 0;
+int DisplayImage = 0;
+bool LinearDisplay = false;
+bool PointDisplay = false;
+bool RectangleDisplay = true;
+unsigned int imgID = 0;
+std::vector<std::string> imgVector{};
 
+int JQ_X = 0;
+int JQ_Y = 0;
+int JQ_W = 100;
+int DD_W = 250;
+int DD_H = 122;
+float BZ = float(DD_H) / DD_W;
+int JQ_H = float(JQ_W) * BZ;
+bool OnlyDisplayBoxSelections = false;
+std::vector<unsigned char> Dimg{};
 void OpenImage() {
+	
 	int width, height, channels;
-	unsigned char* img = stbi_load("45deg.jpg", &width, &height, &channels, 0);
+	unsigned char* img = stbi_load(("img/" + imgVector[imgID] + ".jpg").c_str(), &width, &height, &channels, 0);
+	{
+		if (JQ_Y >= height) {
+			JQ_Y = 0;
+		}
+		if (JQ_X >= width) {
+			JQ_X = 0;
+		}
+		if ((JQ_X + JQ_W) >= width) {
+			JQ_W = 250;
+		}
+	}
 	if (img != NULL) {
-		unsigned char* edge_img = new unsigned char[width * height];
-		unsigned char* blur_img = new unsigned char[width * height];
-		unsigned char* img2 = ConversionGrayscaleImage(img, width, height, channels);
-		
-		myBlur(img2, blur_img, width, height, 5);
-
+		unsigned char** imgS = new unsigned char* [3];
+		for (size_t i = 0; i < 3; i++)
+		{
+			imgS[i] = new unsigned char[width * height];
+		}
+		//灰度处理
+		ConversionGrayscaleImage(imgS[0], img, width, height, channels);
+		//图像模糊
+		myBlur(imgS[0], imgS[1], width, height, 5);
+		//边缘提取
 		keymolen::Canny::NoiseFilter filter = keymolen::Canny::NoiseFilter::Gaus5x5;
 		keymolen::Canny* mCanny = new keymolen::Canny(width, height);
-		mCanny->edges(edge_img, blur_img, filter);
+		mCanny->edges(imgS[2], imgS[1], filter);
 
+		//显示图像
+		if (DisplayImage == 0) {
+			for (size_t ix = 0; ix < width; ++ix)
+			{
+				for (size_t iy = 0; iy < height; ++iy)
+				{
+					GetPix(ix, iy, &img[(iy * width + ix) * channels]);
+				}
+			}
+		}
+		else {
+			for (size_t ix = 0; ix < width; ix++)
+			{
+				for (size_t iy = 0; iy < height; iy++)
+				{
+					GetPix(ix, iy, (float(imgS[DisplayImage - 1][iy * width + ix]) / 255));
+				}
+			}
+		}
+
+		//Hough 变换获取直线
 		keymolen::Hough* mHough = new keymolen::Hough();
-		mHough->Transform(edge_img, width, height);
-
+		mHough->Transform(imgS[2], width, height);
 		int aw, ah;
 		aw = ah = maxa = 0;
 		const unsigned int* accu = mHough->GetAccu(&aw, &ah);
@@ -352,29 +703,120 @@ void OpenImage() {
 		}
 		std::vector< std::pair< std::pair<int, int>, std::pair<int, int> > > lines = mHough->GetLines(maxPy);
 
-		for (size_t ix = 0; ix < width; ix++)
-		{
-			for (size_t iy = 0; iy < height; iy++)
+		unsigned char clr[3] = { 255,0,0 };
+		if (LinearDisplay) {
+			for (auto i : lines)
 			{
-				//GetPix(ix, iy, &img[(iy * width + ix) * channels]);
-				GetPix(ix, iy, (float(edge_img[iy * width + ix]) / 255));
+				Bresenham(i.first.first, i.first.second, i.second.first, i.second.second);
 			}
 		}
-		unsigned char clr[3] = { 0,0,255 };
-		for (auto i : lines)
+		
+
+		//计算所有线段的交点
+		std::vector<std::pair<float, float>> DianS;
+		for (size_t i = 0; i < lines.size(); ++i)
 		{
-			//if (i.first.first < 0 || i.first.first > width)continue;
-			//if (i.second.first < 0 || i.second.first > width)continue;
-			//if (i.first.second < 0 || i.first.second > height)continue;
-			//if (i.second.second < 0 || i.second.second > height)continue;
-			Bresenham(i.first.first, i.first.second, i.second.first, i.second.second);
-			//GetPix(i.first.first, i.first.second, clr);
-			//GetPix(i.second.first, i.second.second, clr);
+			for (size_t ix = i + 1; ix < lines.size(); ++ix)
+			{
+				std::pair<int, int> dian = findIntersection(lines[i].first, lines[i].second, lines[ix].first, lines[ix].second);
+				DianS.push_back(dian);
+			}
 		}
+
+
+		//std::cout << " Dian: " << std::endl;
+		//去掉不符合条件的点
+		for (size_t i = 0; i < DianS.size(); ++i)
+		{
+			if (PointDisplay)GetPix(DianS[i].first, DianS[i].second, clr);
+			if ((DianS[i].first < 0) || (DianS[i].first > width) || (DianS[i].second < 0) || (DianS[i].second > height)) {
+				//std::cout << DianS[i].first << " - " << DianS[i].second << std::endl;
+				//GetPix2(DianS[i].first, DianS[i].second, 1.0);
+				std::swap(DianS[i], DianS[DianS.size() - 1]);
+				DianS.pop_back();
+				--i;
+				continue;
+			}
+			if (!dian_Establish(imgS[2], width, height, DianS[i], 15)) {
+				//std::cout << "ON: " << DianS[i].first << " - " << DianS[i].second << std::endl;
+				//GetPix2(DianS[i].first, DianS[i].second, 0.0);
+				std::swap(DianS[i], DianS[DianS.size() - 1]);
+				DianS.pop_back();
+				--i;
+				continue;
+			}
+			for (size_t ix = i + 1; ix < DianS.size(); ++ix)
+			{
+				if ((int(DianS[i].first) == int(DianS[ix].first)) && (int(DianS[i].second) == int(DianS[ix].second))) {
+					std::swap(DianS[ix], DianS[DianS.size() - 1]);
+					DianS.pop_back();
+				}
+			}
+		}
+
+		//把接近的点给合并了
+		for (size_t ci = 0; ci < 2; ci++)
+		{
+			for (size_t i = 0; i < DianS.size(); ++i)
+			{
+				for (size_t ix = i + 1; ix < DianS.size(); ++ix)
+				{
+					int JL = sqrt((DianS[i].first - DianS[ix].first) * (DianS[i].first - DianS[ix].first) + (DianS[i].second - DianS[ix].second) * (DianS[i].second - DianS[ix].second));
+					if (JL < 30) {
+						DianS[i].first += DianS[ix].first;
+						DianS[i].second += DianS[ix].second;
+						DianS[i].first /= 2;
+						DianS[i].second /= 2;
+
+						std::swap(DianS[ix], DianS[DianS.size() - 1]);
+						DianS.pop_back();
+					}
+				}
+			}
+		}
+
+		unsigned char clr2[3] = { 0,255,0 };
+		for (size_t i = 0; i < DianS.size(); ++i)
+		{
+			if (PointDisplay)GetPix(DianS[i].first, DianS[i].second, clr2);
+		}
+		
+		
+
+		//检测些点可以组成矩形
+		std::cout << "DianS: " << DianS.size() << std::endl;
+		if (RectangleDisplay) {
+			std::vector<std::pair<int, int>> SIBIANXING(4);
+			for (size_t i1 = 0; i1 < DianS.size(); i1++)
+			{
+				for (size_t i2 = i1 + 1; i2 < DianS.size(); i2++)
+				{
+					for (size_t i3 = i2 + 1; i3 < DianS.size(); i3++)
+					{
+						for (size_t i4 = i3 + 1; i4 < DianS.size(); i4++)
+						{
+							SIBIANXING[0] = DianS[i1];
+							SIBIANXING[1] = DianS[i2];
+							SIBIANXING[2] = DianS[i3];
+							SIBIANXING[3] = DianS[i4];
+							if (isRectangle(SIBIANXING)) {
+								Bresenham2(SIBIANXING[0].first, SIBIANXING[0].second, SIBIANXING[1].first, SIBIANXING[1].second);
+								Bresenham2(SIBIANXING[1].first, SIBIANXING[1].second, SIBIANXING[2].first, SIBIANXING[2].second);
+								Bresenham2(SIBIANXING[2].first, SIBIANXING[2].second, SIBIANXING[3].first, SIBIANXING[3].second);
+								Bresenham2(SIBIANXING[3].first, SIBIANXING[3].second, SIBIANXING[0].first, SIBIANXING[0].second);
+							}
+						}
+					}
+				}
+			}
+		}
+
 		stbi_image_free(img);
-		delete img2;
-		delete edge_img;
-		delete blur_img;
+		for (size_t i = 0; i < 3; i++)
+		{
+			delete imgS[i];
+		}
+		delete[] imgS;
 	}
 }
 
@@ -385,10 +827,14 @@ void UpdateAtlas() {
 	{
 		P[i] = 0;
 	}
+	mTimer.MomentTiming(u8"处理耗时");
 	OpenImage();
+	mTimer.MomentEnd();
 	mTexture->endHOSTImagePointer();
 	mTexture->UpDataImage();
 }
+
+
 
 int main() {
 	/************************** 初始化窗口和VulKan **************************/
@@ -458,10 +904,6 @@ int main() {
 
 	mTexture = new VulKan::PixelTexture(mDevice, mCommandPool, nullptr, TextureW, TextureH, 4, mSampler);
 
-	
-
-	UpdateAtlas();
-
 	std::vector<VulKan::UniformParameter*> mUniformParameter;
 	VulKan::UniformParameter* textureParam = new VulKan::UniformParameter();
 	textureParam->mBinding = 0;
@@ -489,7 +931,19 @@ int main() {
 	VulKan::DescriptorSet* mDescriptorSet = new VulKan::DescriptorSet(mDevice, mUniformParameter,
 		mVkDescriptorSetLayout, mDescriptorPool, mSwapChain->getImageCount());
 
+
+	TOOL::FilePath("img", &imgVector, "jpg");
+
+	UpdateAtlas();
+
 	ImVec2 uv0{ 0,0 }, uv1{ 0.7,0.7 };
+
+	std::vector<char*> ViewMods{
+		u8"原图",
+		u8"灰度",
+		u8"模糊",
+		u8"边缘"
+	};
 
 	while (!mWindow->shouldClose())
 	{
@@ -504,13 +958,44 @@ int main() {
 		if (ImGui::Button(u8"渲染")) {
 			UpdateAtlas();
 		}
-		
+		if (ImGui::BeginCombo(u8"图片", imgVector[imgID].c_str()))
+		{
+			for (int n = 0; n < imgVector.size(); n++)
+			{
+				const bool is_selected = (imgID == n);
+				if (ImGui::Selectable(imgVector[n].c_str(), is_selected))
+					imgID = n;
+				if (is_selected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		if (ImGui::BeginCombo(u8"观察对象", ViewMods[DisplayImage]))
+		{
+			for (int n = 0; n < ViewMods.size(); n++)
+			{
+				const bool is_selected = (DisplayImage == n);
+				if (ImGui::Selectable(ViewMods[n], is_selected))
+					DisplayImage = n;
+				if (is_selected)
+					ImGui::SetItemDefaultFocus();
+			}
+			ImGui::EndCombo();
+		}
+		for (size_t i = 0; i < mTimer.MomentCount; i++)
+		{
+			ImGui::Text(u8"%s : %d",mTimer.mMomentNameS[i], mTimer.mMomentTimerS[i]);
+		}
+		ImGui::Checkbox(u8"点", &PointDisplay);
+		ImGui::Checkbox(u8"线", &LinearDisplay);
+		ImGui::Checkbox(u8"框", &RectangleDisplay);
 		ImGui::Text(u8"最大：%d", maxa);
 		ImGui::SliderInt(u8"最大相似度偏移", &maxPy, 0, maxa);
-			
+		
+
 		static bool kao;
 		ImGui::Checkbox(u8"比例缩小", &kao);
-		ImGui::SliderFloat(u8"UV0_X", &uv0.x, 0.0f, 1.0f); 
+		ImGui::SliderFloat(u8"UV0_X", &uv0.x, 0.0f, 1.0f);
 		ImGui::SliderFloat(u8"UV0_Y", &uv0.y, 0.0f, 1.0f);
 		if (kao) {
 			if ((uv0.y - uv0.x) != (uv1.y - uv1.x)) {
@@ -526,12 +1011,22 @@ int main() {
 				//std::cout << "1" << std::endl;
 			}
 		}
+		ImGui::Checkbox(u8"只显示框选", &OnlyDisplayBoxSelections);
+		ImGui::SliderInt(u8"JQ_X", &JQ_X, 0.0f, TextureW);
+		ImGui::SliderInt(u8"JQ_Y", &JQ_Y, 0.0f, TextureH);
+		ImGui::SliderInt(u8"JQ_W", &JQ_W, 0.0f, TextureW);
 		ImGui::End();
 
 		ImGui::Begin(u8"监视器 ");
 		ImGui::SetWindowPos(ImVec2{ Global::mWidth * 0.2f,0 });
 		ImGui::SetWindowSize(ImVec2{ float(Global::mWidth * 0.8f), float(Global::mHeight) });
-		ImGui::Image((ImTextureID)mDescriptorSet->getDescriptorSet(mCurrentFrame), ImVec2{ float(Global::mWidth * 0.8f), float(Global::mHeight * 0.8f) }, uv0, uv1);
+		if (OnlyDisplayBoxSelections) { 
+			JQ_H = JQ_W * BZ;
+			uv0 = { float(JQ_X) / TextureW, float(JQ_Y) / TextureH };
+			uv1 = { float(JQ_X + JQ_W) / TextureW, float(JQ_Y + JQ_H) / TextureH };
+			ImGui::Image((ImTextureID)mDescriptorSet->getDescriptorSet(mCurrentFrame), ImVec2{ float(Global::mWidth * 0.8f), float(Global::mWidth * 0.8f * BZ) }, uv0, uv1); 
+		}
+		else ImGui::Image((ImTextureID)mDescriptorSet->getDescriptorSet(mCurrentFrame), ImVec2{ float(Global::mWidth * 0.8f), float(Global::mHeight * 0.8f) }, uv0, uv1);
 		ImGui::End();
 		ImGui::Render();
 
