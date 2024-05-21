@@ -1,117 +1,106 @@
 #include <iostream>
 #include <angelscript.h>
-#include "scriptstdstring.h"
-
-void AngelScriptMessage(asSMessageInfo* msg, void* param) {
-    if (msg->type == asMSGTYPE_ERROR) {
-        std::cout << "Error:[" << msg->message << "]" << "Row:[" << msg->row << "]" << std::endl;
-    }
-
-    if (msg->type == asMSGTYPE_INFORMATION) {
-        std::cout << "Info:[" << msg->message << "]" << "Row:[" << msg->row << "]" << std::endl;
-    }
-
-    if (msg->type == asMSGTYPE_WARNING) {
-        std::cout << "Warning:[" << msg->message << "]" << "Row:[" << msg->row << "]" << std::endl;
-    }
-}
+#include "AngelScriptCode.h"
+#include <string>
 
 // 示例函数，用于注册给脚本调用
-void MyFunction(int kao)
+std::string MyFunction(std::string& str)
 {
-    std::cout << "Hello from the script!  " << kao << std::endl;
+    std::cout << str << std::endl;
+    str = str + " - ";
+    return str;
 }
 
-static int wo = 89;
-
-int Getxx() {
-    return wo;
+void MyIntPointer2(int** i)
+{
+    std::cout << "MyIntPointer:" << *i << std::endl;
+    **i += 100;
 }
 
+void MyIntPointer(int* i)
+{
+    std::cout << "MyIntPointer:" << *i << std::endl;
+    *i += 100;
+}
+
+void MyInt(int& i)
+{
+    std::cout << "MyInt:" << i << std::endl;
+    i += 10;
+}
+//&out   只可以返回值，无法读取
+//&in    只可以读取值，无法返回
+//&inout 只有类才支持，除非开启 asEP_ALLOW_UNSAFE_REFERENCES 特性
+
+// 编译并执行脚本代码
+const char* scriptCode = R"(
+int main(int ID)
+{
+    array<int> arr;
+    arr.resize(2);
+    arr[0] = 10;
+    arr[1] = 20;
+
+    
+    MyClass obj(777);
+    obj.printNumber();
+    obj.printHeavyLoad();
+    obj.printHeavyLoad(15);
+    MyInt(ID);
+    MyIntPointer(ID);
+    return ID;
+}
+)";
+
+class MyClass {
+private:
+    int myNumber;
+
+public:
+    MyClass() : myNumber(666) {}
+    MyClass(int num) : myNumber(num) {}
+
+    void printNumber() {
+        std::cout << "My number is: " << myNumber << std::endl;
+    }
+
+    void printHeavyLoad(){ std::cout << "HeavyLoad" << std::endl; }
+    void printHeavyLoad(int num) { std::cout << "HeavyLoad：" << num << std::endl; }
+};
+void ConstructMyClass(int Z, MyClass* ptr) { new(ptr) MyClass(Z); printf("int\n"); }
+void ConstructMyClass2(MyClass* ptr) { new(ptr) MyClass(); printf("wu\n"); }
 
 int main()
 {
-    // 创建AngelScript引擎
-    asIScriptEngine* engine = asCreateScriptEngine();
-
-    RegisterStdString(engine);//添加字符串类型
-
-    // 消息回调 脚本执行错误之类的
-    int r = engine->SetMessageCallback(asFUNCTION(AngelScriptMessage), 0, asCALL_CDECL);
-    if (r < 0) {
-        std::cout << "Failed to set message callback" << std::endl;
-        return -1;
-    }
-
-    // 注册要在脚本中调用的函数
-    r = engine->RegisterGlobalFunction("void MyFunction(int)", asFUNCTION(MyFunction), asCALL_CDECL);
-    if (r < 0) {
-        std::cout << "Failed to register global function: MyFunction" << std::endl;
-        engine->ShutDownAndRelease();
-        return -1;
-    }
-
-    engine->RegisterGlobalProperty("int wo", &wo);//注册变量
-    std::string wod;
-    engine->RegisterGlobalProperty("string wod", &wod);//注册变量
-
-    r = engine->RegisterGlobalFunction("int Getxx()", asFUNCTION(Getxx), asCALL_CDECL);
-    if (r < 0) {
-        std::cout << "Failed to register global function: Getxx" << std::endl;
-        engine->ShutDownAndRelease();
-        return -1;
-    }
-
-    // 创建一个新的脚本上下文
-    asIScriptContext* context = engine->CreateContext();
-
-    // 编译并执行脚本代码
-    const char* scriptCode = R"(
-        void main()
-        {
-            string www = "wowow d";
-            MyFunction(5);
-            int koa = Getxx();
-            MyFunction(koa);
-            MyFunction(wo);
-            wo = 6;
-            MyFunction(wo);
-        }
-    )";
-
-    // 编译脚本
-    asIScriptModule* module = engine->GetModule(0, asGM_ALWAYS_CREATE);
-    module->AddScriptSection("script", scriptCode);
-    module->Build();
-
-    // 获取脚本函数句柄
-    asIScriptFunction* function = module->GetFunctionByDecl("void main()");
-    if (!function) {
-        std::cout << "Failed to get script function" << std::endl;
-        context->Release();
-        engine->ShutDownAndRelease();
-        return -1;
-    }
+    AngelScriptCode ASOpcode;
+    int r;
+    r = ASOpcode.engine->RegisterGlobalFunction("string MyFunction(string&in)", asFUNCTION(MyFunction), asCALL_CDECL); assert(r >= 0);
+    r = ASOpcode.engine->RegisterGlobalFunction("void MyIntOut(int &out)", asFUNCTION(MyInt), asCALL_CDECL); assert(r >= 0);
+    r = ASOpcode.engine->RegisterGlobalFunction("void MyIntIn(int &in)", asFUNCTION(MyInt), asCALL_CDECL); assert(r >= 0);
+    r = ASOpcode.engine->RegisterGlobalFunction("void MyInt(int &inout)", asFUNCTION(MyInt), asCALL_CDECL); assert(r >= 0);
+    r = ASOpcode.engine->RegisterGlobalFunction("void MyIntPointer(int &inout)", asFUNCTION(MyIntPointer), asCALL_CDECL); assert(r >= 0);
+    //r = ASOpcode.engine->RegisterGlobalFunction("void MyIntPointer2(int**)", asFUNCTION(MyIntPointer2), asCALL_CDECL); assert(r >= 0);
+    // 注册 MyClass 类
+    r = ASOpcode.engine->RegisterObjectType("MyClass", sizeof(MyClass), asOBJ_VALUE | asOBJ_POD | asOBJ_APP_CLASS_C); assert(r >= 0);
+    r = ASOpcode.engine->RegisterObjectBehaviour("MyClass", asBEHAVE_CONSTRUCT, "void f()", asFUNCTION(ConstructMyClass2), asCALL_CDECL_OBJLAST); assert(r >= 0);//生成类
+    r = ASOpcode.engine->RegisterObjectBehaviour("MyClass", asBEHAVE_CONSTRUCT, "void f(int)", asFUNCTION(ConstructMyClass), asCALL_CDECL_OBJLAST); assert(r >= 0);//生成类
+    r = ASOpcode.engine->RegisterObjectMethod("MyClass", "void printNumber()", asMETHOD(MyClass, printNumber), asCALL_THISCALL); assert(r >= 0);
+    // 注册重载函数
+    r = ASOpcode.engine->RegisterObjectMethod("MyClass", "void printHeavyLoad()", asMETHODPR(MyClass, printHeavyLoad, (), void), asCALL_THISCALL); assert(r >= 0);
+    r = ASOpcode.engine->RegisterObjectMethod("MyClass", "void printHeavyLoad(int)", asMETHODPR(MyClass, printHeavyLoad, (int), void), asCALL_THISCALL); assert(r >= 0);
+    ASOpcode.InitCreateContext();
+    AngelScriptBuilder Build = ASOpcode.newBuilderCode(scriptCode);
+    asIScriptFunction* F = Build.GetFunction("int main(int)");
 
     // 准备执行脚本
-    r = context->Prepare(function);
-    if (r < 0) {
-        std::cout << "Failed to prepare script context" << std::endl;
-        context->Release();
-        engine->ShutDownAndRelease();
-        return -1;
-    }
-
+    r = ASOpcode.context->Prepare(F); assert(r >= 0);
+    // 设置函数输入参数
+    int inputValue = 18;
+    ASOpcode.context->SetArgDWord(0, inputValue); // 设置整数参数
     // 执行脚本
-    r = context->Execute();
-    if (r != asEXECUTION_FINISHED) {
-        std::cout << "Failed to execute script" << std::endl;
-    }
-
-    // 释放资源
-    context->Release();
-    engine->ShutDownAndRelease();
-
+    r = ASOpcode.context->Execute(); assert(r == asEXECUTION_FINISHED);
+    // 获取函数返回值
+    std::cout << "main:" << *reinterpret_cast<int*>(ASOpcode.context->GetAddressOfReturnValue()) << std::endl;
     return 0;
 }
 

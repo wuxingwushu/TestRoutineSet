@@ -62,9 +62,9 @@ bool ArmConsole::ArmActionFormula(Arm_State& State) {
     if ((State.x - mState.x) < 0)arm_pos_x = -0.1f;
     else arm_pos_x = 0.1f;
     if ((State.y - mState.y) < 0)arm_pos_y = -0.1f;
-    else arm_pos_x = 0.1f;
+    else arm_pos_y = 0.1f;
     if ((State.z - mState.z) < 0) { arm_pos_z = -0.1f; Hu = true; }
-    else { arm_pos_x = 0.1f; Hu = false; }
+    else { arm_pos_z = 0.1f; Hu = false; }
 
     unsigned char BS = 3;
     while (BS)

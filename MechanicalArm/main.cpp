@@ -47,12 +47,28 @@ double GetBianB(double A, double B, double AB) {
 	return AB * sin(B) / sin(C_rad);
 }
 
+// 计算视场角的函数
+double calculateFieldOfView(double sensorSize, double focalLength) {
+	double fov = 2 * atan(sensorSize / (2 * focalLength)) * (180 / M_PI); // 弧度转换为角度
+	return fov;
+}
+
 int main() {
+	// 定义传感器尺寸（假设以毫米为单位）和焦距（假设以毫米为单位）
+	double sensorSize = 1 / 2.8; // 传感器尺寸（对角线），单位：毫米
+	double focalLength = 3.95; // 焦距，单位：毫米
+
+	// 计算视场角
+	double fov = calculateFieldOfView(sensorSize, focalLength);
+
+	// 输出结果
+	std::cout << "视场角为：" << fov << " 度" << std::endl;
+
 	CameraRays mCameraRays(3.95, 5.59, 3.14, 2304, 1296);
 
 	Arm_State mState{ 1,7,7, 90 };
 	ArmConsole mArmConsole(mState);
-	mArmConsole.ArmActionFormulaSingle(mState);
+	mArmConsole.ArmActionFormula(mState);
 
 	int BoxCoreX = width / 2 + 300, BoxCoreY = height / 2 - 100;
 

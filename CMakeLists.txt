@@ -67,3 +67,7 @@ add_subdirectory(ANN build/ANN)
 add_subdirectory(Hough build/Hough)
 # 机械臂控制代码
 add_subdirectory(MechanicalArm build/MechanicalArm)
+# 2048 Ai
+add_subdirectory(2048 build/2048)
+# 网格道路生成图
+add_subdirectory(GridNavigation build/GridNavigation)
