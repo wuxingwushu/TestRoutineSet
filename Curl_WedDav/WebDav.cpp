@@ -3,10 +3,7 @@
 #include <fstream>
 #include <curl/curl.h>
 #include <sstream>
-#include "../Tool/rapidxml.hpp"
-#include "../Variable.h"
 #include <filesystem>
-#include "../Tool/Tool.h"
 
 
 // 回调函数，用于接收服务器响应数据

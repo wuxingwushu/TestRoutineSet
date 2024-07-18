@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
     }
 
     if (1) {
-        for (int i = 0; i < 60000; ++i) {
+        for (int i = 0; i < 600; ++i) {
             printf("%d\n", i);
             genann_train(ann, &TrainData[i * 784], &TrainLabel[i * 10], 0.1);
         }

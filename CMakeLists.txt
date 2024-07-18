@@ -71,3 +71,5 @@ add_subdirectory(MechanicalArm build/MechanicalArm)
 add_subdirectory(2048 build/2048)
 # 网格道路生成图
 add_subdirectory(GridNavigation build/GridNavigation)
+# 解析.h 头文件生成注册文件
+add_subdirectory(clang build/clang)

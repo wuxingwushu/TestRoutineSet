@@ -467,7 +467,7 @@ void TestGameAI() {
 }
 
 int main() {
-    if (1) {
+    if (0) {
         srand(time(0));
         ann = genann_init(16, 3, 784, 4);
     }
