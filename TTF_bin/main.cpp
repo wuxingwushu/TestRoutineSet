@@ -18,15 +18,15 @@ typedef struct FontInformation
     char Dy;                // 字体显示位置高度偏移
 };
 
-// UTF-8 范围对应的字体位图信息索引表的偏移值
-typedef struct FontRange
+// Unicode范围 对应的字体位图信息索引表的偏移值
+typedef struct UnicodeRange
 {
-    unsigned short Head;      // UTF-8 的 起始范围
-    unsigned short Tail;      // UTF-8 的 结束范围
+    unsigned short Head;      // Unicode 起始范围
+    unsigned short Tail;      // Unicode 结束范围
     unsigned short Deviation; // 字体位图信息索引表的偏移值
 };
 
-const FontRange UTF8Range[] = {
+const UnicodeRange mUnicodeRange[] = {
 )";
 
 const char Info_2[] = R"(};
@@ -36,9 +36,9 @@ const char Info_2[] = R"(};
  * @param bytes UTF8字 的 整型值
  * @return 字符串第一个UTF8字的位图索引值 */
 unsigned short from_Deviation(unsigned int bytes){
-  for(unsigned int i = 0; i < sizeof(UTF8Range) / sizeof(FontRange); ++i){
-    if((UTF8Range[i].Head <= bytes) && (bytes <=  UTF8Range[i].Tail)){
-      bytes -= UTF8Range[i].Deviation;
+  for(unsigned int i = 0; i < sizeof(mUnicodeRange) / sizeof(UnicodeRange); ++i){
+    if((mUnicodeRange[i].Head <= bytes) && (bytes <=  mUnicodeRange[i].Tail)){
+      bytes -= mUnicodeRange[i].Deviation;
       return bytes;
     }
   }
@@ -127,11 +127,11 @@ typedef struct FontInformation
     char Dy;                // 字体显示位置高度偏移
 };
 
-// UTF-8 字片段范围 对应的 字体位图信息索引表的偏移值
-typedef struct FontRange
+// Unicode范围 对应的 字体位图信息索引表的偏移值
+typedef struct UnicodeRange
 {
-    unsigned short Head;      // UTF-8 的 起始范围
-    unsigned short Tail;      // UTF-8 的 结束范围
+    unsigned short Head;      // Unicode 起始范围
+    unsigned short Tail;      // Unicode 结束范围
     unsigned short Deviation; // 字体位图信息索引表的偏移值
 };
 
@@ -179,7 +179,7 @@ int main()
     // https://www.cnblogs.com/findumars/p/6833786.html
     // https://www.jrgraphix.net/r/Unicode/F900-FAFF
     // 添加你需要的UTF8字体范围
-    FontRange UTF8Range[] = {
+    UnicodeRange mUnicodeRange[] = {
         {0x0020, 0x007F, 0}, // Basic Latin
         {0x2000, 0x206F, 0}, // General Punctuation
         {0x2E80, 0x2FDF, 0}, // CJK Radicals Supplement ~ Kangxi Radicals
@@ -194,20 +194,20 @@ int main()
 
     // 向 .h 写入固定信息
     file << Info_1;
-    // 字体 UTF8 的范围偏移值
+    // 字体 UTF8 的范围偏移值(也是字体的总量)
     unsigned short ADDDeviation = 0;
-    for (size_t iR = 0; iR < sizeof(UTF8Range) / sizeof(FontRange); ++iR)
+    for (size_t iR = 0; iR < sizeof(mUnicodeRange) / sizeof(UnicodeRange); ++iR)
     {
         // 获取当中字范围的偏移值
-        UTF8Range[iR].Deviation = UTF8Range[iR].Head - ADDDeviation;
+        mUnicodeRange[iR].Deviation = mUnicodeRange[iR].Head - ADDDeviation;
         // 偏移值 累加 这个范围内的字数
-        ADDDeviation += (UTF8Range[iR].Tail - UTF8Range[iR].Head) + 1;
+        ADDDeviation += (mUnicodeRange[iR].Tail - mUnicodeRange[iR].Head) + 1;
         // 将数据 写入 .h
-        file << "\t{ " << std::to_string(UTF8Range[iR].Head) << ", "
-             << std::to_string(UTF8Range[iR].Tail) << ", "
-             << std::to_string(UTF8Range[iR].Deviation) << " },\n";
+        file << "\t{ " << std::to_string(mUnicodeRange[iR].Head) << ", "
+             << std::to_string(mUnicodeRange[iR].Tail) << ", "
+             << std::to_string(mUnicodeRange[iR].Deviation) << " },\n";
         // 打印信息
-        std::cout << "Head ：" << UTF8Range[iR].Head << "   Tail ：" << UTF8Range[iR].Tail << "   Deviation ：" << UTF8Range[iR].Deviation << std::endl;
+        std::cout << "Head ：" << mUnicodeRange[iR].Head << "   Tail ：" << mUnicodeRange[iR].Tail << "   Deviation ：" << mUnicodeRange[iR].Deviation << std::endl;
     }
     // 向 .h 写入固定信息
     file << Info_2;
@@ -218,9 +218,9 @@ int main()
     // 将 utf-8 的整型转为 字（字符串） 的 工具
     std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 
-    for (size_t iR = 0; iR < sizeof(UTF8Range) / sizeof(FontRange); ++iR)
+    for (size_t iR = 0; iR < sizeof(mUnicodeRange) / sizeof(UnicodeRange); ++iR)
     {
-        for (unsigned short i = UTF8Range[iR].Head; i <= UTF8Range[iR].Tail; ++i)
+        for (unsigned short i = mUnicodeRange[iR].Head; i <= mUnicodeRange[iR].Tail; ++i)
         {
             // 打印打前正在处理的字
             std::cout << converter.to_bytes(i);
@@ -305,7 +305,7 @@ int main()
     }
 
     // 向 .h 写入固定结尾
-    file << "};\n#endif\n\n";
+    file << "};\n#endif\n";
 
     // 关闭文件
     FontInfo.close();
