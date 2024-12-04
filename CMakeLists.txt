@@ -73,3 +73,5 @@ add_subdirectory(2048 build/2048)
 add_subdirectory(GridNavigation build/GridNavigation)
 # 解析.h 头文件生成注册文件
 add_subdirectory(clang build/clang)
+# 罗汉塔解体步骤
+add_subdirectory(ArhatTower build/ArhatTower)

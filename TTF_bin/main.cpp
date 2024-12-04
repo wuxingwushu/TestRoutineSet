@@ -156,7 +156,8 @@ int main()
     }
 
     // 设置字体大小
-    if (FT_Set_Char_Size(face, 0, 16 * 64, 72, 72))
+    //if (FT_Set_Char_Size(face, 0, 16 * 72, 72, 72))   
+    if (FT_Set_Pixel_Sizes(face, 16, 16))// 设置最大像素宽高
     {
         std::cerr << "Failed to set character size" << std::endl;
         FT_Done_Face(face);

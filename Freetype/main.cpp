@@ -366,7 +366,8 @@ int main() {
 		return -1;
 	}
 
-	if (FT_Set_Char_Size(face, 0, 16 * 64, 300, 300)) {
+	if (FT_Set_Char_Size(face, 0, 32 * 72, 72, 72)) {
+	//if (FT_Set_Pixel_Sizes(face, 32, 32)) {
 		std::cerr << "Failed to set character size" << std::endl;
 		FT_Done_Face(face);
 		FT_Done_FreeType(library);
