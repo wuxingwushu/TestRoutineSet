@@ -75,3 +75,12 @@ add_subdirectory(GridNavigation build/GridNavigation)
 add_subdirectory(clang build/clang)
 # 罗汉塔解体步骤
 add_subdirectory(ArhatTower build/ArhatTower)
+# 正方形转动惯量微积分
+add_subdirectory(MomentOfInertia build/MomentOfInertia)
+# 生命游戏
+add_subdirectory(CellMachine build/CellMachine)
+# 软体网格物理
+add_subdirectory(CellPhysics build/CellPhysics)
+# 获取视野内网格
+add_subdirectory(View build/View)
+
