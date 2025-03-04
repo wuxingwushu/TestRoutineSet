@@ -1,6 +1,8 @@
 #include <iostream>
 #include "View.h"
-#include "ViewPos.h"
+// #include "ViewPos.h"
+
+#define M_PI 3.14
 
 float PI(float angle)
 {
@@ -22,6 +24,7 @@ int main()
     {
         std::cout << i.x << " - " << i.y << std::endl;
     }
+    /*
     std::cout << " ViewPos ++++++++++++++++++++++++++++++ " << std::endl;
     ViewPos* mViewPos = new ViewPos(ViewX, ViewY, 5);
     std::vector<ivec3> data3 = mViewPos->GetViewBox(ViewAngleX,ViewAngleY);
@@ -29,7 +32,7 @@ int main()
     {
         std::cout << i.x << " - " << i.y << " - " << i.z << std::endl;
     }
-    
+    */
 
     return 0;
 }

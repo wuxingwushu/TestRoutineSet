@@ -17,7 +17,8 @@ add_subdirectory(VUH build/VUH)
 add_subdirectory(Kompute build/Kompute)
 add_subdirectory(VulKan_Mandelbrot build/VulKan_Mandelbrot) # 纯VulKan GUP计算
 # Brensenham 直线
-add_subdirectory(Brensenham build/Brensenham)
+add_subdirectory(Bresenham build/Bresenham)
+add_subdirectory(BresenhamPerformance build/BresenhamPerformance)# 不同 性能分析
 add_subdirectory(Dithering build/Dithering)# 不同直线实现效果
 # MIDI 项目
 add_subdirectory(MIDI build/MIDI)# sf2音色
@@ -38,7 +39,7 @@ add_subdirectory(AngelScript build/AngelScript)
 # DLL 函数 读取 调用
 add_subdirectory(DLL build/DLL)
 # 坚果云 WedDav
-add_subdirectory(Curl_WedDav build/Curl_WedDav)
+# add_subdirectory(Curl_WedDav build/Curl_WedDav) # 可以去看 翻译姬(TranslatorKyi)的 WedDav
 # 导入ReptilesYouDao项目
 add_subdirectory(ReptilesYouDao build/ReptilesYouDao)
 # A_Star 寻路算法

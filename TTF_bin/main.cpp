@@ -7,7 +7,12 @@
 #include <stdlib.h>
 #include <wchar.h>
 
-const char Info_1[] = R"(
+const char Info_1[] = R"(#ifndef __FontFunction_H
+#define __FontFunction_H
+
+// 是否以 .h 的形式存储字体位图信息
+#define FromInfo_Bin 0
+
 // 字体位图信息
 typedef struct FontInformation
 {
@@ -26,17 +31,24 @@ typedef struct UnicodeRange
     unsigned short Deviation; // 字体位图信息索引表的偏移值
 };
 
+#if From_Bin
 const UnicodeRange mUnicodeRange[] = {
 )";
 
 const char Info_2[] = R"(};
+#endif
 
 /**
  * @brief UTF-8 转 对应的字体位图索引值
  * @param bytes UTF8字 的 整型值
  * @return 字符串第一个UTF8字的位图索引值 */
+#if From_Bin
 unsigned short from_Deviation(unsigned int bytes){
-  for(unsigned int i = 0; i < sizeof(mUnicodeRange) / sizeof(UnicodeRange); ++i){
+	for(unsigned int i = 0; i < sizeof(mUnicodeRange) / sizeof(UnicodeRange); ++i){
+#else
+unsigned short from_Deviation(unsigned int bytes, const UnicodeRange* mUnicodeRange, unsigned int size){
+	for(unsigned int i = 0; i < size; ++i){
+#endif
     if((mUnicodeRange[i].Head <= bytes) && (bytes <=  mUnicodeRange[i].Tail)){
       bytes -= mUnicodeRange[i].Deviation;
       return bytes;
@@ -51,7 +63,11 @@ unsigned char fromDeviation = 0;
  * @brief UTF-8 转 对应的字体位图索引值
  * @param bytes UTF8字符串
  * @return 字符串第一个UTF8字的位图索引值 */
+#if From_Bin
 unsigned short from_bytes(const char* bytes) {
+#else
+unsigned short from_bytes(const char* bytes, const UnicodeRange* mUnicodeRange, unsigned int size) {
+#endif
     unsigned int result;
 
     unsigned char c = bytes[0];  // 将有符号字节转换为无符号字节
@@ -106,11 +122,13 @@ unsigned short from_bytes(const char* bytes) {
         return 0xFFFF;
     }
 
+    
+#if From_Bin
     return from_Deviation(result);
+#else
+    return from_Deviation(result, mUnicodeRange, size);
+#endif
 }
-
-// 是否以 .h 的形式存储字体位图信息
-#define FromInfo_Bin 0
 
 #if FromInfo_Bin
 // 字体位图信息
@@ -181,16 +199,23 @@ int main()
     // https://www.jrgraphix.net/r/Unicode/F900-FAFF
     // 添加你需要的UTF8字体范围
     UnicodeRange mUnicodeRange[] = {
-        {0x0020, 0x007F, 0}, // Basic Latin
-        {0x2000, 0x206F, 0}, // General Punctuation
-        {0x2E80, 0x2FDF, 0}, // CJK Radicals Supplement ~ Kangxi Radicals
-        {0x3000, 0x30FF, 0}, // CJK Symbols and Punctuation ~ Hiragana ~ Katakana
-        {0x31F0, 0x31FF, 0}, // Katakana Phonetic Extensions
-        {0x3400, 0x4DBF, 0}, // CJK Unified Ideographs Extension A
-        {0x4E00, 0x9FFF, 0}, // CJK Unified Ideographs
-        {0xF900, 0xFAFF, 0}, // CJK Compatibility Ideographs
-        {0xFE30, 0xFE4F, 0}, // CJK Compatibility Forms
-        {0xFF00, 0xFFEF, 0}, // Halfwidth and Fullwidth Forms
+        { 0x0020, 0x007F, 0 },//Basic Latin
+        { 0x0300, 0x036F, 0 },// + Combining Diacritical Marks
+        { 0x2000, 0x206F, 0 },//General Punctuation
+        { 0x2070, 0x209F, 0 },// + Superscripts and Subscripts
+        { 0x2100, 0x214F, 0 },// + Letterlike Symbols
+        { 0x2150, 0x218F, 0 },// + Number Forms
+        { 0x2600, 0x26FF, 0 },// + Miscellaneous Symbols
+        { 0x2E80, 0x2FDF, 0 },//CJK Radicals Supplement ~ Kangxi Radicals
+        { 0x3000, 0x30FF, 0 },//CJK Symbols and Punctuation ~ Hiragana ~ Katakana
+        { 0x3190, 0x319F, 0 },// + Kanbun
+        { 0x31F0, 0x31FF, 0 },//Katakana Phonetic Extensions
+        { 0x3400, 0x4DBF, 0 },//CJK Unified Ideographs Extension A
+        { 0x4E00, 0x9FFF, 0 },//CJK Unified Ideographs
+        { 0xF900, 0xFAFF, 0 },//CJK Compatibility Ideographs
+        { 0xFE30, 0xFE4F, 0 },//CJK Compatibility Forms
+        { 0xFE50, 0xFE6F, 0 },// + Small Form Variants
+        { 0xFF00, 0xFFEF, 0 },//Halfwidth and Fullwidth Forms
     };
 
     // 向 .h 写入固定信息
@@ -205,13 +230,23 @@ int main()
         ADDDeviation += (mUnicodeRange[iR].Tail - mUnicodeRange[iR].Head) + 1;
         // 将数据 写入 .h
         file << "\t{ " << std::to_string(mUnicodeRange[iR].Head) << ", "
-             << std::to_string(mUnicodeRange[iR].Tail) << ", "
-             << std::to_string(mUnicodeRange[iR].Deviation) << " },\n";
+            << std::to_string(mUnicodeRange[iR].Tail) << ", "
+            << std::to_string(mUnicodeRange[iR].Deviation) << " },\n";
         // 打印信息
         std::cout << "Head ：" << mUnicodeRange[iR].Head << "   Tail ：" << mUnicodeRange[iR].Tail << "   Deviation ：" << mUnicodeRange[iR].Deviation << std::endl;
     }
     // 向 .h 写入固定信息
     file << Info_2;
+
+    unsigned int RangeSize = sizeof(mUnicodeRange) / sizeof(UnicodeRange);
+    for (size_t i = 0; i < 4; ++i)
+    {
+        FontInfo.write((((char*)&RangeSize) + i), 1);
+    }
+    for (size_t i = 0; i < sizeof(mUnicodeRange); ++i)
+    {
+        FontInfo.write((((char*)&mUnicodeRange) + i), 1);
+    }
 
     char CharBuffer[4096];  // 临时存储位图数据
     unsigned int Index = 0; // 存储当前位图数据已使用字节总量
@@ -241,20 +276,20 @@ int main()
             Info.y = face->glyph->bitmap.rows;                        // 获取位图高
             Info.Dx = face->glyph->bitmap_left;                       // 获取位图位置 x 偏移
             Info.Dy = 15 - face->glyph->bitmap_top;                   // 获取位图位置 y 偏移
-            FontInfo.write(((char *)&Info), sizeof(FontInformation)); // 将数据以 bit 的形写入
+            FontInfo.write(((char*)&Info), sizeof(FontInformation)); // 将数据以 bit 的形写入
 
             // 再将字的信息以文本方式存储在 .h 文件中
             file << "\t{ " << std::to_string(Info.Deviation) << ", "
-                 << std::to_string(Info.x) << ", "
-                 << std::to_string(Info.y) << ", "
-                 << std::to_string(Info.Dx) << ", "
-                 << std::to_string(15 - Info.Dy) << " },"
-                 << "//" << converter.to_bytes(i) << ", " << i << "\n";
+                << std::to_string(Info.x) << ", "
+                << std::to_string(Info.y) << ", "
+                << std::to_string(Info.Dx) << ", "
+                << std::to_string(15 - Info.Dy) << " },"
+                << "//" << converter.to_bytes(i) << ", " << i << "\n";
 
             // 记录当前是第几 bit 数据
             unsigned int BufferIndex = 0;
             // 获取存储位图数据指针
-            char *CharBuffer_P = CharBuffer;
+            char* CharBuffer_P = CharBuffer;
             // 临时存储 一字节 位图数据
             unsigned char Char_B = 0;
             // 开始循环取 bit 数据
@@ -306,7 +341,7 @@ int main()
     }
 
     // 向 .h 写入固定结尾
-    file << "};\n#endif\n";
+    file << "};\n#endif\n#endif\n";
 
     // 关闭文件
     FontInfo.close();

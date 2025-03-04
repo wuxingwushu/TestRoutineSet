@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 
 #define AStar_MemoryPool
 
